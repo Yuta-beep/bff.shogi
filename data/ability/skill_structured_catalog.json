@@ -1,0 +1,3358 @@
+{
+  "version": "skill-structured-v1",
+  "generatedAt": "2026-03-07T11:50:00.744Z",
+  "source": "/Users/malmalon/Documents/codebase/private/shogi-mobile-app/backend/scripts/generated/seed_master_piece.sql",
+  "totalSkills": 93,
+  "entries": [
+    {
+      "id": 1,
+      "skillDesc": "敵駒を取るときは駒を1つまたぐ。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "capture_with_leap",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture_attempt",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_capture_attempt",
+            "effectType": "capture_with_leap",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取るときは駒を1つまたぐ。",
+            "params": {
+              "sourceSentence": "敵駒を取るときは駒を1つまたぐ。"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "skillDesc": "「泉」駒によって覚醒し、「辰」に変身する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "transform_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_condition_met",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "condition": {
+            "type": "ally_piece_exists",
+            "kanji": "泉"
+          },
+          "transformToKanji": "辰"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_condition_met",
+            "effectType": "transform_piece",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "条件成立で辰に変身",
+            "params": {
+              "sourceSentence": "条件成立で辰に変身"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "skillDesc": "10%の確率で周囲の敵駒を消滅させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "remove_piece",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "remove_piece",
+            "targetRule": "adjacent_area",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "10%の確率で周囲の敵駒を消滅させる",
+            "params": {
+              "sourceSentence": "10%の確率で周囲の敵駒を消滅させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "skillDesc": "移動時20％の確率で相手の手持ち駒を1つ燃やす。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_hand",
+        "effectSummaryType": "destroy_hand_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "destroy_hand_piece",
+            "targetRule": "enemy_hand",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": 1,
+            "valueText": "移動時20％の確率で相手の手持ち駒を1つ燃やす。",
+            "params": {
+              "sourceSentence": "移動時20％の確率で相手の手持ち駒を1つ燃やす。"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "skillDesc": "水の流れにより周囲の敵駒を押し流す。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "forced_move",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "forced_move",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "水の流れにより周囲の敵駒を押し流す",
+            "params": {
+              "sourceSentence": "水の流れにより周囲の敵駒を押し流す"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "skillDesc": "波の伝播により周囲の敵駒を押し流す。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "forced_move",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "forced_move",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "波の伝播により周囲の敵駒を押し流す",
+            "params": {
+              "sourceSentence": "波の伝播により周囲の敵駒を押し流す"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "skillDesc": "木の成長により周囲に「木」駒を召喚する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "summon_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "summon_piece",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "木の成長により周囲に「木」駒を召喚する",
+            "params": {
+              "sourceSentence": "木の成長により周囲に「木」駒を召喚する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "skillDesc": "各敵駒ごとに10%の確率で、ランダムな方向に1マス移動させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "forced_move",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "forced_move",
+            "targetRule": "enemy_piece",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "各敵駒ごとに10%の確率で、ランダムな方向に1マス移動させる",
+            "params": {
+              "sourceSentence": "各敵駒ごとに10%の確率で、ランダムな方向に1マス移動させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "skillDesc": "壁で反射して継続移動する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "reflective_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "reflection": true,
+          "continueUntilBlocked": true
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "reflective_movement",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "壁で反射して継続移動する。",
+            "params": {
+              "sourceSentence": "壁で反射して継続移動する。"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "skillDesc": "敵駒に取られたとき、40％の確率で自分の手持ち駒に戻る",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "self",
+        "effectSummaryType": "return_to_hand",
+        "procChance": 0.4,
+        "durationTurns": null,
+        "triggerTiming": "on_captured",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_captured",
+            "effectType": "return_to_hand",
+            "targetRule": "self",
+            "procChance": 0.4,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒に取られたとき、40％の確率で自分の手持ち駒に戻る",
+            "params": {
+              "sourceSentence": "敵駒に取られたとき、40％の確率で自分の手持ち駒に戻る"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "skillDesc": "周囲の敵駒を次の番まで闇で覆う。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 1,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "apply_status",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": 1,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "dark_blind",
+            "params": {
+              "sourceSentence": "dark_blind"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "skillDesc": "周囲の敵駒を10%の確率で消滅させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "remove_piece",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "remove_piece",
+            "targetRule": "adjacent_area",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "周囲の敵駒を10%の確率で消滅させる",
+            "params": {
+              "sourceSentence": "周囲の敵駒を10%の確率で消滅させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "skillDesc": "磁力効果により周囲の敵駒を遠ざける。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "forced_move",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "forced_move",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "磁力効果により周囲の敵駒を遠ざける",
+            "params": {
+              "sourceSentence": "磁力効果により周囲の敵駒を遠ざける"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "skillDesc": "10％の確率で周囲の敵駒を行動不能にする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "apply_status",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "apply_status",
+            "targetRule": "adjacent_area",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "10%の確率で周囲の敵駒を行動不能にする",
+            "params": {
+              "sourceSentence": "10%の確率で周囲の敵駒を行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "skillDesc": "20%の確率で「金」・「銀」・「銅」駒を獲得する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "gain_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "gain_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "20%の確率で「金」・「銀」・「銅」駒を獲得する",
+            "params": {
+              "sourceSentence": "20%の確率で「金」・「銀」・「銅」駒を獲得する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "skillDesc": "20%の確率で敵を感電させ1ターン動けなくさせる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "apply_status",
+        "procChance": 0.2,
+        "durationTurns": 1,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "apply_status",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": 1,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "20%の確率で敵を感電させ1ターン動けなくさせる",
+            "params": {
+              "sourceSentence": "20%の確率で敵を感電させ1ターン動けなくさせる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "skillDesc": "10%の確率で相手の持ち駒を消滅させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "hand_piece",
+        "effectSummaryType": "remove_piece",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "remove_piece",
+            "targetRule": "hand_piece",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "10%の確率で相手の持ち駒を消滅させる",
+            "params": {
+              "sourceSentence": "10%の確率で相手の持ち駒を消滅させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "skillDesc": "時停止により周囲の敵駒を2ターン行動不能にする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "apply_status",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "時停止により周囲の敵駒を2ターン行動不能にする",
+            "params": {
+              "sourceSentence": "時停止により周囲の敵駒を2ターン行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "skillDesc": "周囲の敵を凍らせ2ターン動けなくする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "apply_status",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "周囲の敵を凍らせ2ターン動けなくする",
+            "params": {
+              "sourceSentence": "周囲の敵を凍らせ2ターン動けなくする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "skillDesc": "移動時20%の確率で「氷」駒を1つ獲得する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "unspecified",
+        "effectSummaryType": "gain_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "gain_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時20%の確率で「氷」駒を1つ獲得する",
+            "params": {
+              "sourceSentence": "移動時20%の確率で「氷」駒を1つ獲得する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "skillDesc": "左右の「砂」駒と連携移動する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "linked_action",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "requiredAllyKanji": "砂",
+          "relativePositions": [
+            "left",
+            "right"
+          ]
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "linked_action",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "sand_link_move",
+            "params": {
+              "sourceSentence": "sand_link_move"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "skillDesc": "強風により周囲の敵駒を押し流す。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "forced_move",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "forced_move",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "強風により周囲の敵駒を押し流す",
+            "params": {
+              "sourceSentence": "強風により周囲の敵駒を押し流す"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "skillDesc": "移動時増殖する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "board_cell",
+        "effectSummaryType": "summon_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "summonPiece": "self_clone",
+          "placement": "adjacent_empty"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "summon_piece",
+            "targetRule": "board_cell",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "self_clone",
+            "params": {
+              "sourceSentence": "self_clone"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 24,
+      "skillDesc": "30%の確率で敵駒を溺れさせ行動不能にする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "apply_status",
+        "procChance": 0.3,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "apply_status",
+            "targetRule": "enemy_piece",
+            "procChance": 0.3,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "30%の確率で敵駒を溺れさせ行動不能にする",
+            "params": {
+              "sourceSentence": "30%の確率で敵駒を溺れさせ行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "skillDesc": "相手の駒は取れないが味方の駒を取れる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "capture_constraint",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "capture_constraint",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "相手の駒は取れないが味方の駒を取れる",
+            "params": {
+              "sourceSentence": "相手の駒は取れないが味方の駒を取れる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 26,
+      "skillDesc": "縦横に1マス移動。敵の移動範囲を1ターン縦横1マスに制限する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": 1,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": 1,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "orthogonal_step_1",
+            "params": {
+              "sourceSentence": "orthogonal_step_1"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": 1,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "restrict_orthogonal_step_1",
+            "params": {
+              "sourceSentence": "restrict_orthogonal_step_1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "skillDesc": "通ったマスを2ターン毒マスにする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "board_cell",
+        "effectSummaryType": "board_hazard",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "board_hazard",
+            "targetRule": "board_cell",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "通ったマスを2ターン毒マスにする",
+            "params": {
+              "sourceSentence": "通ったマスを2ターン毒マスにする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "skillDesc": "周囲の敵駒の行動範囲を上下1マスのみにする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "restrict_vertical_step_1",
+            "params": {
+              "sourceSentence": "restrict_vertical_step_1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "skillDesc": "正面の敵駒の動きをコピーする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "front_enemy",
+        "effectSummaryType": "copy_ability",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "copy_ability",
+            "targetRule": "front_enemy",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "正面の敵駒の動きをコピーする",
+            "params": {
+              "sourceSentence": "正面の敵駒の動きをコピーする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "skillDesc": "周囲の敵駒を「歩」に変化させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "transform_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "transform_piece",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "周囲の敵駒を「歩」に変化させる",
+            "params": {
+              "sourceSentence": "周囲の敵駒を「歩」に変化させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "skillDesc": "移動時敵駒を1つランダムに2ターン行動不能にする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "apply_status",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時敵駒を1つランダムに2ターン行動不能にする",
+            "params": {
+              "sourceSentence": "移動時敵駒を1つランダムに2ターン行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "skillDesc": "移動時20%の確率で周囲に「山」駒を出現させる。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "summon_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "summon_piece",
+            "targetRule": "adjacent_area",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "移動時20%の確率で周囲に「山」駒を出現させる",
+            "params": {
+              "sourceSentence": "移動時20%の確率で周囲に「山」駒を出現させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 33,
+      "skillDesc": "画数が10画以上の敵駒を無効化する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "disable_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "condition": {
+            "type": "kanji_stroke_count_gte",
+            "value": 10
+          }
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "disable_piece",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "if_strokes_gte_10",
+            "params": {
+              "sourceSentence": "if_strokes_gte_10"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 34,
+      "skillDesc": "移動時左右に岩の障害物を配置する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "board_cell",
+        "effectSummaryType": "summon_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "summonPieceKanji": "岩",
+          "positions": [
+            "left",
+            "right"
+          ],
+          "blockMovement": true
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "summon_piece",
+            "targetRule": "board_cell",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "place_rock_left_right",
+            "params": {
+              "sourceSentence": "place_rock_left_right"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 35,
+      "skillDesc": "20%の確率で味方の「歩」を「金」「銀」「銅」に変化させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "transform_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "transform_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "20%の確率で味方の「歩」を「金」「銀」「銅」に変化させる",
+            "params": {
+              "sourceSentence": "20%の確率で味方の「歩」を「金」「銀」「銅」に変化させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 36,
+      "skillDesc": "移動時20％の確率で「霊」駒を召喚する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "unspecified",
+        "effectSummaryType": "summon_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "summon_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時20%の確率で「霊」駒を召喚する",
+            "params": {
+              "sourceSentence": "移動時20%の確率で「霊」駒を召喚する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 37,
+      "skillDesc": "敵駒に取られても相手の持ち駒に加わらない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "capture_constraint",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_captured",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_captured",
+            "effectType": "capture_constraint",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "not_added_to_enemy_hand",
+            "params": {
+              "sourceSentence": "not_added_to_enemy_hand"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 38,
+      "skillDesc": "50％の確率で敵駒に取られるのを回避する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "defense_or_immunity",
+        "procChance": 0.5,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "enemy_piece",
+            "procChance": 0.5,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "50%の確率で敵駒に取られるのを回避する",
+            "params": {
+              "sourceSentence": "50%の確率で敵駒に取られるのを回避する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 39,
+      "skillDesc": "周囲の敵駒を20％の確率で相手の持ち駒に送る。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "send_to_hand",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "send_to_hand",
+            "targetRule": "adjacent_area",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "to_enemy_hand",
+            "params": {
+              "sourceSentence": "to_enemy_hand"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 40,
+      "skillDesc": "ターンごとに移動能力が変化する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_turn_start",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "mode": "cyclic_movement_pattern"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_turn_start",
+            "effectType": "modify_movement",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "cyclic_pattern_change",
+            "params": {
+              "sourceSentence": "cyclic_pattern_change"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 41,
+      "skillDesc": "移動時後方の味方駒を連れていく。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "linked_action",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "relativeSource": "behind",
+          "action": "pull_follow"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "linked_action",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "pull_ally_behind",
+            "params": {
+              "sourceSentence": "pull_ally_behind"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 42,
+      "skillDesc": "左または右隣りの見方駒のスキルをコピーする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "copy_ability",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "copy_ability",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "左または右隣りの見方駒のスキルをコピーする",
+            "params": {
+              "sourceSentence": "左または右隣りの見方駒のスキルをコピーする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 43,
+      "skillDesc": "隣接する駒が動いたらそれに連動して動く。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "self",
+        "effectSummaryType": "linked_action",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_other_piece_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "watchedRange": "adjacent",
+          "reaction": "follow_move"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_other_piece_move",
+            "effectType": "linked_action",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "reactive_follow_move",
+            "params": {
+              "sourceSentence": "reactive_follow_move"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 44,
+      "skillDesc": "「民」駒を自陣4行のランダムな場所に召喚(召喚制限は5体)。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "summon_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "summon_piece",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "「民」駒を自陣4行のランダムな場所に召喚(召喚制限は5体)",
+            "params": {
+              "sourceSentence": "「民」駒を自陣4行のランダムな場所に召喚(召喚制限は5体)"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 45,
+      "skillDesc": "「畑」があると斜め前も移動可能となる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "「畑」があると斜め前も移動可能となる",
+            "params": {
+              "sourceSentence": "「畑」があると斜め前も移動可能となる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 46,
+      "skillDesc": "民駒を斜め前にも移動可能にする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "民駒を斜め前にも移動可能にする",
+            "params": {
+              "sourceSentence": "民駒を斜め前にも移動可能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 47,
+      "skillDesc": "味方駒を強化し敵駒から取られないようにする(5ターン持続)。味方の「竜」を覚醒させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": 5,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "buff",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": 5,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "grant_uncapturable",
+            "params": {
+              "sourceSentence": "grant_uncapturable"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "transform_piece",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": 5,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "awaken_ryu",
+            "params": {
+              "sourceSentence": "awaken_ryu"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 48,
+      "skillDesc": "移動時10%の確率で周囲8マスの敵駒を1つ消滅させる。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_8",
+        "effectSummaryType": "remove_piece",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "remove_piece",
+            "targetRule": "adjacent_8",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "移動時10%の確率で周囲8マスの敵駒を1つ消滅させる",
+            "params": {
+              "sourceSentence": "移動時10%の確率で周囲8マスの敵駒を1つ消滅させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 49,
+      "skillDesc": "40%で実験体を召喚。2回取られないと消えない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "composite",
+        "procChance": 0.4,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "summon_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.4,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "40%で実験体を召喚",
+            "params": {
+              "sourceSentence": "40%で実験体を召喚"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "unspecified",
+            "procChance": 0.4,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "2回取られないと消えない",
+            "params": {
+              "sourceSentence": "2回取られないと消えない"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 50,
+      "skillDesc": "敵駒を「異」駒に変化させる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "transform_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "transform_piece",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を「異」駒に変化させる",
+            "params": {
+              "sourceSentence": "敵駒を「異」駒に変化させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 51,
+      "skillDesc": "変化前の駒の能力を継承する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "transform_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "transform_piece",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "変化前の駒の能力を継承する",
+            "params": {
+              "sourceSentence": "変化前の駒の能力を継承する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 52,
+      "skillDesc": "敵駒を取ったとき、左右にいる敵駒もまとめて取る。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "left_right",
+        "effectSummaryType": "multi_capture",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_capture",
+            "effectType": "multi_capture",
+            "targetRule": "left_right",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取ったとき、左右にいる敵駒もまとめて取る",
+            "params": {
+              "sourceSentence": "敵駒を取ったとき、左右にいる敵駒もまとめて取る"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 53,
+      "skillDesc": "敵駒を取れないが敵駒から取られない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "defense_or_immunity",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取れないが敵駒から取られない",
+            "params": {
+              "sourceSentence": "敵駒を取れないが敵駒から取られない"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 54,
+      "skillDesc": "移動方向の1、2マス先に敵駒がいる場合、まとめて取る。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "multi_capture",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "multi_capture",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動方向の1、2マス先に敵駒がいる場合、まとめて取る",
+            "params": {
+              "sourceSentence": "移動方向の1、2マス先に敵駒がいる場合、まとめて取る"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 55,
+      "skillDesc": "一手前に相手が移動させた駒と同じ移動範囲になる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "copy_ability",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_turn_start",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "last_enemy_moved_piece",
+          "sentenceCount": 1,
+          "copiedField": "move_pattern"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_turn_start",
+            "effectType": "copy_ability",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "copy_last_enemy_move_pattern",
+            "params": {
+              "sourceSentence": "copy_last_enemy_move_pattern"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 56,
+      "skillDesc": "斜め4方向の敵駒のスキルを封印する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "seal_skill",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "seal_skill",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "斜め4方向の敵駒のスキルを封印する",
+            "params": {
+              "sourceSentence": "斜め4方向の敵駒のスキルを封印する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 57,
+      "skillDesc": "轟音で移動時両隣の敵駒を押し出す。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "forced_move",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "forced_move",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "轟音で移動時両隣の敵駒を押し出す",
+            "params": {
+              "sourceSentence": "轟音で移動時両隣の敵駒を押し出す"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 58,
+      "skillDesc": "移動時10％の確率で周囲の空きマスに「犇」駒を召喚する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "summon_piece",
+        "procChance": 0.1,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "summon_piece",
+            "targetRule": "adjacent_area",
+            "procChance": 0.1,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "移動時10%の確率で周囲の空きマスに「犇」駒を召喚する",
+            "params": {
+              "sourceSentence": "移動時10%の確率で周囲の空きマスに「犇」駒を召喚する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 59,
+      "skillDesc": "他の味方駒が取られたときに身代わりとなる。。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "substitute",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_captured",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_captured",
+            "effectType": "substitute",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "他の味方駒が取られたときに身代わりとなる",
+            "params": {
+              "sourceSentence": "他の味方駒が取られたときに身代わりとなる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 60,
+      "skillDesc": "周囲8マスにいる全ての駒のスキルと移動を無効化する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_8",
+        "effectSummaryType": "disable_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "disable_piece",
+            "targetRule": "adjacent_8",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "周囲8マスにいる全ての駒のスキルと移動を無効化する",
+            "params": {
+              "sourceSentence": "周囲8マスにいる全ての駒のスキルと移動を無効化する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 61,
+      "skillDesc": "敵の攻撃を左右の空きマスに移動して回避する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "left_right",
+        "effectSummaryType": "defense_or_immunity",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "left_right",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵の攻撃を左右の空きマスに移動して回避する",
+            "params": {
+              "sourceSentence": "敵の攻撃を左右の空きマスに移動して回避する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 62,
+      "skillDesc": "前方以外の隣接する味方への攻撃を50%で無効化する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "disable_piece",
+        "procChance": 0.5,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "disable_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.5,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "前方以外の隣接する味方への攻撃を50%で無効化する",
+            "params": {
+              "sourceSentence": "前方以外の隣接する味方への攻撃を50%で無効化する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 63,
+      "skillDesc": "取られると相手駒を感染状態にし2ターン移動不能にする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "on_captured",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_captured",
+            "effectType": "apply_status",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "infected_immobilized",
+            "params": {
+              "sourceSentence": "infected_immobilized"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 64,
+      "skillDesc": "隣接する味方駒の移動範囲を1マス延長する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "隣接する味方駒の移動範囲を1マス延長する",
+            "params": {
+              "sourceSentence": "隣接する味方駒の移動範囲を1マス延長する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 65,
+      "skillDesc": "移動時20%で周囲の敵駒を押し流す。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "forced_move",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "forced_move",
+            "targetRule": "adjacent_area",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "移動時20%で周囲の敵駒を押し流す",
+            "params": {
+              "sourceSentence": "移動時20%で周囲の敵駒を押し流す"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 66,
+      "skillDesc": "取られた時、周囲のマスに4ターン侵入不可の穴を生成する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "board_hazard",
+        "procChance": null,
+        "durationTurns": 4,
+        "triggerTiming": "on_captured",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_captured",
+            "effectType": "board_hazard",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": 4,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "取られた時、周囲のマスに4ターン侵入不可の穴を生成する",
+            "params": {
+              "sourceSentence": "取られた時、周囲のマスに4ターン侵入不可の穴を生成する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 67,
+      "skillDesc": "取られた時、相手駒を淵に沈めて3ターン行動不能にする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "unspecified",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 3,
+        "triggerTiming": "on_captured",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_captured",
+            "effectType": "apply_status",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": 3,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "取られた時、相手駒を淵に沈めて3ターン行動不能にする",
+            "params": {
+              "sourceSentence": "取られた時、相手駒を淵に沈めて3ターン行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 68,
+      "skillDesc": "移動時に左右の敵駒を1マス遠ざける。敵駒を取った時、周囲のランダムな空マス1つを×マスにする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "forced_move",
+            "targetRule": "left_right",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時に左右の敵駒を1マス遠ざける",
+            "params": {
+              "sourceSentence": "移動時に左右の敵駒を1マス遠ざける"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "on_capture",
+            "effectType": "board_hazard",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "敵駒を取った時、周囲のランダムな空マス1つを×マスにする",
+            "params": {
+              "sourceSentence": "敵駒を取った時、周囲のランダムな空マス1つを×マスにする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 69,
+      "skillDesc": "盤面に「死」、「魂」駒が残っていると、敵駒からの攻撃を回避する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "defense_or_immunity",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "盤面に「死」、「魂」駒が残っていると、敵駒からの攻撃を回避する",
+            "params": {
+              "sourceSentence": "盤面に「死」、「魂」駒が残っていると、敵駒からの攻撃を回避する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 70,
+      "skillDesc": "味方の駒を取った敵駒に5ターン後に消滅する呪いをかける。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "remove_piece",
+        "procChance": null,
+        "durationTurns": 5,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "remove_piece",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": 5,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "味方の駒を取った敵駒に5ターン後に消滅する呪いをかける",
+            "params": {
+              "sourceSentence": "味方の駒を取った敵駒に5ターン後に消滅する呪いをかける"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 71,
+      "skillDesc": "盤面に「魂」が残っているとき、相手は「王」を攻撃できない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "board_cell",
+        "effectSummaryType": "defense_or_immunity",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "board_cell",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "盤面に「魂」が残っているとき、相手は「王」を攻撃できない",
+            "params": {
+              "sourceSentence": "盤面に「魂」が残っているとき、相手は「王」を攻撃できない"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 72,
+      "skillDesc": "移動時敵駒から1つ選択し2ターン行動不能にする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "apply_status",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時敵駒から1つ選択し2ターン行動不能にする",
+            "params": {
+              "sourceSentence": "移動時敵駒から1つ選択し2ターン行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 73,
+      "skillDesc": "移動時味方駒から1つ選択し2ターン無敵状態にする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "defense_or_immunity",
+        "procChance": null,
+        "durationTurns": 2,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "defense_or_immunity",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": 2,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時味方駒から1つ選択し2ターン無敵状態にする",
+            "params": {
+              "sourceSentence": "移動時味方駒から1つ選択し2ターン無敵状態にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 74,
+      "skillDesc": "移動時に周囲の敵駒を1ターン行動不能にする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": 1,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "apply_status",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": 1,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "移動時に周囲の敵駒を1ターン行動不能にする",
+            "params": {
+              "sourceSentence": "移動時に周囲の敵駒を1ターン行動不能にする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 75,
+      "skillDesc": "移動時もともといたマスを行動不能マスにする。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "board_cell",
+        "effectSummaryType": "apply_status",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "apply_status",
+            "targetRule": "board_cell",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時もともといたマスを行動不能マスにする",
+            "params": {
+              "sourceSentence": "移動時もともといたマスを行動不能マスにする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 76,
+      "skillDesc": "相手の駒を取ると、もう一度だけ移動ができる。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "unspecified",
+        "effectSummaryType": "extra_action",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_capture",
+            "effectType": "extra_action",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "相手の駒を取ると、もう一度だけ移動ができる",
+            "params": {
+              "sourceSentence": "相手の駒を取ると、もう一度だけ移動ができる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 77,
+      "skillDesc": "上下1マスを茨化して、相手が持ち駒をそのマスに置けないようにする。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "hand_piece",
+        "effectSummaryType": "board_hazard",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "board_hazard",
+            "targetRule": "hand_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "上下1マスを茨化して、相手が持ち駒をそのマスに置けないようにする",
+            "params": {
+              "sourceSentence": "上下1マスを茨化して、相手が持ち駒をそのマスに置けないようにする"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 78,
+      "skillDesc": "隣接する味方駒一体に復活効果を付与する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "revive",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "revive",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "隣接する味方駒一体に復活効果を付与する",
+            "params": {
+              "sourceSentence": "隣接する味方駒一体に復活効果を付与する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 79,
+      "skillDesc": "移動後同じ行にいる味方駒の行動範囲が1マス伸びる。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "after_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "filter": "same_row",
+          "deltaRange": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "after_move",
+            "effectType": "modify_movement",
+            "targetRule": "ally_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": 1,
+            "valueText": "extend_range_same_row",
+            "params": {
+              "sourceSentence": "extend_range_same_row"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 80,
+      "skillDesc": "盤面の端まで貫通して移動する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "modify_movement",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1,
+          "penetratingMove": true,
+          "maxRange": "board_edge"
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "penetrate_to_edge",
+            "params": {
+              "sourceSentence": "penetrate_to_edge"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 81,
+      "skillDesc": "2回行動ができる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "unspecified",
+        "effectSummaryType": "extra_action",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "extra_action",
+            "targetRule": "unspecified",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "2回行動ができる",
+            "params": {
+              "sourceSentence": "2回行動ができる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 82,
+      "skillDesc": "敵駒を取った時盤面のランダムなマスに「炎」駒を召喚する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "summon_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_capture",
+            "effectType": "summon_piece",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取った時盤面のランダムなマスに「炎」駒を召喚する",
+            "params": {
+              "sourceSentence": "敵駒を取った時盤面のランダムなマスに「炎」駒を召喚する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 83,
+      "skillDesc": "敵駒を取ったらもう一度だけ移動できる。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "extra_action",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "extra_action",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取ったらもう一度だけ移動できる",
+            "params": {
+              "sourceSentence": "敵駒を取ったらもう一度だけ移動できる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 84,
+      "skillDesc": "敵駒を取った時盤面のランダムなマスに「火」駒を召喚する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "summon_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_capture",
+            "effectType": "summon_piece",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取った時盤面のランダムなマスに「火」駒を召喚する",
+            "params": {
+              "sourceSentence": "敵駒を取った時盤面のランダムなマスに「火」駒を召喚する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 85,
+      "skillDesc": "周囲の味方駒のスキル発動確率を30％増加させる。味方の「陰」駒が同じ行や列にいるとき敵駒に取られない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "ally_piece",
+        "effectSummaryType": "composite",
+        "procChance": 0.3,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "buff",
+            "targetRule": "adjacent_area",
+            "procChance": 0.3,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": 0.3,
+            "valueText": "skill_proc_chance_up",
+            "params": {
+              "sourceSentence": "skill_proc_chance_up"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "self",
+            "procChance": 0.3,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "uncapturable_if_ally_yin_same_row_or_col",
+            "params": {
+              "sourceSentence": "uncapturable_if_ally_yin_same_row_or_col"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 86,
+      "skillDesc": "周囲の敵駒を呪い状態にしてスキル発動を阻害する。味方の「陽」が同じ行や列にいるとき敵駒に取られない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "adjacent_area",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "seal_skill",
+            "targetRule": "adjacent_area",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": 1,
+            "valueNum": null,
+            "valueText": "周囲の敵駒を呪い状態にしてスキル発動を阻害する",
+            "params": {
+              "sourceSentence": "周囲の敵駒を呪い状態にしてスキル発動を阻害する"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "same_row_or_col",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "味方の「陽」が同じ行や列にいるとき敵駒に取られない",
+            "params": {
+              "sourceSentence": "味方の「陽」が同じ行や列にいるとき敵駒に取られない"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 87,
+      "skillDesc": "後ろに移動した分前に行けるマスが増える。移動途中の駒を全て取る。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "self",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 2
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "modify_movement",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "gain_forward_range_by_backward_steps",
+            "params": {
+              "sourceSentence": "gain_forward_range_by_backward_steps"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "on_move",
+            "effectType": "multi_capture",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "capture_all_pieces_on_path",
+            "params": {
+              "sourceSentence": "capture_all_pieces_on_path"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 88,
+      "skillDesc": "取った敵駒の移動範囲を継承する。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "inherit_ability",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "inherit_ability",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "取った敵駒の移動範囲を継承する",
+            "params": {
+              "sourceSentence": "取った敵駒の移動範囲を継承する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 89,
+      "skillDesc": "移動時に20％の確率で「金」に変化、10％の確率で「宝」に変化する。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "unspecified",
+        "effectSummaryType": "transform_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "transform_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時に20%の確率で「金」に変化、10%の確率で「宝」に変化する",
+            "params": {
+              "sourceSentence": "移動時に20%の確率で「金」に変化、10%の確率で「宝」に変化する"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 90,
+      "skillDesc": "敵駒を取ったとき、味方の「銭」駒をひとつ取った敵駒に変化させる。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "transform_piece",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "on_capture",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_capture",
+            "effectType": "transform_piece",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取ったとき、味方の「銭」駒をひとつ取った敵駒に変化させる",
+            "params": {
+              "sourceSentence": "敵駒を取ったとき、味方の「銭」駒をひとつ取った敵駒に変化させる"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 91,
+      "skillDesc": "相手から取られない。特殊効果を受けない。移動時に移動先の2×2領域の敵駒をすべて取る。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "self",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 3
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "uncapturable",
+            "params": {
+              "sourceSentence": "uncapturable"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "self",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "immune_to_special_effects",
+            "params": {
+              "sourceSentence": "immune_to_special_effects"
+            }
+          },
+          {
+            "order": 3,
+            "triggerTiming": "on_move",
+            "effectType": "multi_capture",
+            "targetRule": "board_cell",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "capture_enemies_in_2x2_at_destination",
+            "params": {
+              "sourceSentence": "capture_enemies_in_2x2_at_destination"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 92,
+      "skillDesc": "移動不可。敵駒を取れない。敵駒に取られない。",
+      "structured": {
+        "skillType": "passive",
+        "targetRule": "enemy_piece",
+        "effectSummaryType": "composite",
+        "procChance": null,
+        "durationTurns": null,
+        "triggerTiming": "passive",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 3
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "passive",
+            "effectType": "modify_movement",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動不可",
+            "params": {
+              "sourceSentence": "移動不可"
+            }
+          },
+          {
+            "order": 2,
+            "triggerTiming": "passive",
+            "effectType": "capture_constraint",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒を取れない",
+            "params": {
+              "sourceSentence": "敵駒を取れない"
+            }
+          },
+          {
+            "order": 3,
+            "triggerTiming": "passive",
+            "effectType": "defense_or_immunity",
+            "targetRule": "enemy_piece",
+            "procChance": null,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "敵駒に取られない",
+            "params": {
+              "sourceSentence": "敵駒に取られない"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 93,
+      "skillDesc": "移動時20％の確率で味方の「歩」駒ひとつを「火」駒に変化させる。",
+      "structured": {
+        "skillType": "active_or_triggered",
+        "targetRule": "unspecified",
+        "effectSummaryType": "transform_piece",
+        "procChance": 0.2,
+        "durationTurns": null,
+        "triggerTiming": "on_move",
+        "scriptHook": null,
+        "parseStatus": "rule_only_v2",
+        "params": {
+          "source": "seed_master_piece.sql",
+          "sentenceCount": 1
+        },
+        "effects": [
+          {
+            "order": 1,
+            "triggerTiming": "on_move",
+            "effectType": "transform_piece",
+            "targetRule": "unspecified",
+            "procChance": 0.2,
+            "durationTurns": null,
+            "radius": null,
+            "valueNum": null,
+            "valueText": "移動時20%の確率で味方の「歩」駒ひとつを「火」駒に変化させる",
+            "params": {
+              "sourceSentence": "移動時20%の確率で味方の「歩」駒ひとつを「火」駒に変化させる"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
