@@ -1,38 +1,58 @@
-# Backend (Initial Skeleton)
+# Backend (Next.js BFF)
 
-This directory is intentionally minimal.
+TypeScript + Next.js Route Handler で構築する BFF（Backend For Frontend）です。
 
-## Current Scope
-- Manage database schema with Supabase migrations
-- Keep server-only environment variables here
-- Prepare a reusable Supabase server client under `lib/supabase`
+## Purpose
+- Mobile/Web クライアントから DB 直接接続させず、HTTP API 経由で `master` スキーマを提供する
+- UI向けDTO整形・公開判定をサーバー側で一元化する
 
-## Directory
-- `supabase/` : Supabase CLI config, migrations, seed
-- `lib/supabase/` : server-side Supabase client
-- `.env.example` : environment variable template
+## Stack
+- Next.js (App Router)
+- TypeScript
+- Supabase JS (service role)
 
-## Prerequisites
-- Node.js 20+ (recommended)
-- Supabase CLI (`npx supabase`)
-- Docker Desktop (required for local `supabase start`)
-
-## Migrations
-Apply migrations to linked/remote project:
-
+## Setup
 ```bash
-npx supabase link --project-ref <your-project-ref>
-npx supabase db push
+npm install
+npm run dev
 ```
 
-Local development (optional):
+開発サーバー: `http://localhost:3000`
 
-```bash
-npx supabase start
-npx supabase db reset
-```
+## Environment Variables
+`.env`（または `.env.local`）に以下を設定してください。
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+※ `EXPO_PUBLIC_SUPABASE_URL` が入っていても動作しますが、BFF用途では `SUPABASE_URL` を推奨。
+
+## API (v1)
+
+### Health
+- `GET /api/health`
+
+### 1) Me snapshot（仮実装）
+- `GET /api/v1/me/snapshot`
+
+### 2) Stage list（実実装）
+- `GET /api/v1/stages`
+
+### 3) Stage select（実装）
+- `POST /api/v1/stages/:stageNo/select`
+
+### 4) Battle setup（実装）
+- `GET /api/v1/stages/:stageNo/battle-setup`
+
+### 5) Piece catalog（実装）
+- `GET /api/v1/pieces/catalog`
+
+### 6) Piece shop catalog（仮実装）
+- `GET /api/v1/shops/piece/catalog`
+
+### 7) Piece shop purchase（仮実装）
+- `POST /api/v1/shops/piece/purchase`
 
 ## Notes
-- Do not expose `SUPABASE_SERVICE_ROLE_KEY` to mobile/web clients.
-- Mobile app should use `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY` only.
-# backend-
+- 現時点でユーザー進行/通貨/所持テーブルは未導入のため、該当APIはモックまたは暫定判定です。
+- スキーマ変更は `supabase/migrations` で管理してください。

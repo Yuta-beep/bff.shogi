@@ -1,17 +1,6 @@
-import { jsonOk, optionsResponse } from '@/lib/http';
-import { MOCK_SHOP_CURRENCY, MOCK_SHOP_ITEMS, MOCK_SHOP_OWNED } from '@/api/shop-mock';
+import { getPieceShopCatalog, optionsPieceShopCatalog } from '@/server/handlers/v1/shops/piece/catalog';
 
 export const runtime = 'nodejs';
 
-export function OPTIONS() {
-  return optionsResponse();
-}
-
-export async function GET() {
-  return jsonOk({
-    items: MOCK_SHOP_ITEMS,
-    ...MOCK_SHOP_CURRENCY,
-    owned: MOCK_SHOP_OWNED,
-    note: 'TEMP_MOCK_NO_CURRENCY_TABLE',
-  });
-}
+export const OPTIONS = optionsPieceShopCatalog;
+export const GET = getPieceShopCatalog;
