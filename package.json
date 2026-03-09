@@ -6,10 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:piece-images": "node scripts/seed-master-piece-image-keys.mjs",
+    "seed:piece-images:storage": "node scripts/upload-piece-images-to-storage.mjs",
+    "reset:users": "node scripts/reset-auth-users.mjs",
+    "reset:users:apply": "node scripts/reset-auth-users.mjs --apply"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
+    "@supabase/supabase-js": "^2.98.0",
+    "dotenv": "^17.3.1",
     "next": "^15.3.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
