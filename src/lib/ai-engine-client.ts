@@ -1,21 +1,29 @@
+import { AiEngineConnectionError, AiEngineHttpError } from '@/lib/ai-engine-errors';
 import type { AiMoveRequest, AiMoveResponse } from '@/lib/ai-engine-contract';
 import type { NormalizedEngineConfig } from '@/lib/engine-config';
 
-export async function requestAiMove(input: AiMoveRequest & { engineConfig: NormalizedEngineConfig }): Promise<AiMoveResponse> {
+export async function requestAiMove(
+  input: AiMoveRequest & { engineConfig: NormalizedEngineConfig },
+): Promise<AiMoveResponse> {
   const baseUrl = (process.env.AI_ENGINE_BASE_URL ?? 'http://127.0.0.1:8080').replace(/\/+$/, '');
 
-  const response = await fetch(`${baseUrl}/v1/ai/move`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(toEngineRequest(input)),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/v1/ai/move`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(toEngineRequest(input)),
+    });
+  } catch (error: any) {
+    throw new AiEngineConnectionError(error?.message ?? 'failed to connect to ai engine');
+  }
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`AI_ENGINE_HTTP_${response.status}: ${text}`);
+    throw new AiEngineHttpError(response.status, text);
   }
 
   const json = (await response.json()) as {

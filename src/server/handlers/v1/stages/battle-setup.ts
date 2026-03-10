@@ -1,6 +1,6 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { isPublishedNow } from '@/lib/time';
-import { getStageBattleSetup, getStageByNo } from '@/services/master';
+import { getStageBattleSetup, getStageByNo } from '@/services/stage-master';
 
 export function optionsBattleSetup() {
   return optionsResponse();
@@ -30,14 +30,14 @@ export async function getBattleSetup(stageNoRaw: string) {
         stageName: stage.stage_name,
         clearConditionType: stage.clear_condition_type ?? 'defeat_boss',
         clearConditionParams: stage.clear_condition_params ?? {},
-        stageCategory: stage.stage_category ?? 'normal'
+        stageCategory: stage.stage_category ?? 'normal',
       },
       labels: {
         stageLabel: `STAGE ${stage.stage_no}`,
         turnLabel: 'TURN 1',
-        handLabel: '持ち駒'
+        handLabel: '持ち駒',
       },
-      ...setup
+      ...setup,
     });
   } catch (error: any) {
     return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load battle setup', 500);

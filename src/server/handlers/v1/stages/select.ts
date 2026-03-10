@@ -1,6 +1,6 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { isPublishedNow } from '@/lib/time';
-import { getStageByNo } from '@/services/master';
+import { getStageByNo } from '@/services/stage-master';
 
 export function optionsStageSelect() {
   return optionsResponse();
@@ -25,7 +25,7 @@ export async function postStageSelect(stageNoRaw: string) {
 
     return jsonOk({
       canStart: true,
-      note: 'NO_USER_PROGRESS_TABLE_YET'
+      note: 'NO_USER_PROGRESS_TABLE_YET',
     });
   } catch (error: any) {
     return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to select stage', 500);

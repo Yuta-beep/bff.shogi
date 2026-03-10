@@ -1,5 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { listPublishedStages } from '@/services/master';
+import { listPublishedStages } from '@/services/stage-master';
 
 export function optionsStageList() {
   return optionsResponse();
@@ -20,9 +20,9 @@ export async function getStageList() {
         clearConditionParams: row.clear_condition_params ?? {},
         recommendedPower: row.recommended_power ?? null,
         staminaCost: row.stamina_cost ?? 0,
-        canStart: true
+        canStart: true,
       })),
-      note: 'NO_USER_PROGRESS_TABLE_YET'
+      note: 'NO_USER_PROGRESS_TABLE_YET',
     });
   } catch (error: any) {
     return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load stages', 500);

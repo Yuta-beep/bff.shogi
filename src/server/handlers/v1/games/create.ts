@@ -1,5 +1,6 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createGameSession, CreateGameSessionError } from '@/services/game-session';
 
 type CreateGameRequest = {
   playerId: string;
@@ -34,51 +35,17 @@ export async function postCreateGame(req: Request) {
 
   try {
     const stageId = await resolveStageId(body.stageNo);
-
-    const { data: gameRow, error: gameError } = await supabaseAdmin
-      .schema('game')
-      .from('games')
-      .insert({
-        player_id: playerId,
-        stage_id: stageId,
-        status: 'in_progress',
-      })
-      .select('game_id,status,started_at')
-      .single();
-
-    if (gameError) {
-      return jsonError('CREATE_GAME_FAILED', gameError.message, 500);
-    }
-
-    const initial = body.initialPosition ?? {};
-    const sideToMove = initial.sideToMove === 'enemy' ? 'enemy' : 'player';
-    const turnNumber = Number.isInteger(initial.turnNumber) && (initial.turnNumber ?? 0) >= 1 ? initial.turnNumber : 1;
-    const moveCount = Number.isInteger(initial.moveCount) && (initial.moveCount ?? 0) >= 0 ? initial.moveCount : 0;
-
-    const { error: posError } = await supabaseAdmin
-      .schema('game')
-      .from('positions')
-      .insert({
-        game_id: gameRow.game_id,
-        board_state: initial.boardState ?? {},
-        hands: initial.hands ?? {},
-        side_to_move: sideToMove,
-        turn_number: turnNumber,
-        move_count: moveCount,
-        sfen: initial.sfen ?? null,
-        state_hash: initial.stateHash ?? null,
-      });
-
-    if (posError) {
-      return jsonError('CREATE_POSITION_FAILED', posError.message, 500);
-    }
-
-    return jsonOk({
-      gameId: gameRow.game_id,
-      status: gameRow.status,
-      startedAt: gameRow.started_at,
+    const session = await createGameSession({
+      playerId,
+      stageId,
+      initialPosition: body.initialPosition,
     });
+
+    return jsonOk(session);
   } catch (error: any) {
+    if (error instanceof CreateGameSessionError) {
+      return jsonError(error.code, error.message, 500);
+    }
     return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to create game', 500);
   }
 }

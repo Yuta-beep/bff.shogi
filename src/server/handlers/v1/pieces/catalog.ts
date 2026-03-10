@@ -1,5 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { listPieceCatalog } from '@/services/master';
+import { listPieceCatalog } from '@/services/piece-master';
 
 export function optionsPieceCatalog() {
   return optionsResponse();
