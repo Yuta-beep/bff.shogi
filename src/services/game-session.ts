@@ -46,13 +46,9 @@ export async function createGameSession(input: CreateGameSessionInput) {
   const initial = input.initialPosition ?? {};
   const sideToMove = initial.sideToMove === 'enemy' ? 'enemy' : 'player';
   const turnNumber =
-    Number.isInteger(initial.turnNumber) && (initial.turnNumber ?? 0) >= 1
-      ? initial.turnNumber
-      : 1;
+    Number.isInteger(initial.turnNumber) && (initial.turnNumber ?? 0) >= 1 ? initial.turnNumber : 1;
   const moveCount =
-    Number.isInteger(initial.moveCount) && (initial.moveCount ?? 0) >= 0
-      ? initial.moveCount
-      : 0;
+    Number.isInteger(initial.moveCount) && (initial.moveCount ?? 0) >= 0 ? initial.moveCount : 0;
 
   const { error: posError } = await supabaseAdmin
     .schema('game')

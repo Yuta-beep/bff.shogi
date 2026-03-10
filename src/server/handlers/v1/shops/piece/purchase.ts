@@ -33,6 +33,6 @@ export async function postPieceShopPurchase(req: Request) {
   return jsonOk({
     success: false,
     reason: 'UI_ONLY' as const,
-    note: 'TEMP_MOCK_NO_CURRENCY_OR_OWNERSHIP_TABLE'
+    note: 'TEMP_MOCK_NO_CURRENCY_OR_OWNERSHIP_TABLE',
   });
 }

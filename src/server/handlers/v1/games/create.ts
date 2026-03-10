@@ -26,7 +26,7 @@ type PostCreateGameDeps = {
 };
 
 export function createPostCreateGame(
-  deps: PostCreateGameDeps = { resolveStageId, createGameSession }
+  deps: PostCreateGameDeps = { resolveStageId, createGameSession },
 ) {
   return async function postCreateGame(req: Request) {
     let body: CreateGameRequest;

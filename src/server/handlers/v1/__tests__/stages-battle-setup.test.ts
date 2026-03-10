@@ -8,7 +8,11 @@ describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
     const handler = createGetBattleSetup({
       getStageByNo: async () => null,
       isPublishedNow: () => true,
-      getStageBattleSetup: async () => ({ board: { size: 9, placements: [] }, enemyRoster: [], rewards: [] }),
+      getStageBattleSetup: async () => ({
+        board: { size: 9, placements: [] },
+        enemyRoster: [],
+        rewards: [],
+      }),
     });
     const response = await handler('1');
     const payload = await readJson(response);

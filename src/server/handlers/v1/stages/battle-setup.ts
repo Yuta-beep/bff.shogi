@@ -13,7 +13,7 @@ export function optionsBattleSetup() {
 }
 
 export function createGetBattleSetup(
-  deps: BattleSetupDeps = { getStageByNo, isPublishedNow, getStageBattleSetup }
+  deps: BattleSetupDeps = { getStageByNo, isPublishedNow, getStageBattleSetup },
 ) {
   return async function getBattleSetup(stageNoRaw: string) {
     const stageNo = Number(stageNoRaw);

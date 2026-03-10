@@ -26,7 +26,9 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  console.log(`Usage:\n  node scripts/run-sql-from-env.mjs --sql "select now();"\n  node scripts/run-sql-from-env.mjs --file scripts/sql/check-auth-fk.sql`);
+  console.log(
+    `Usage:\n  node scripts/run-sql-from-env.mjs --sql "select now();"\n  node scripts/run-sql-from-env.mjs --file scripts/sql/check-auth-fk.sql`,
+  );
 }
 
 async function main() {
@@ -41,7 +43,8 @@ async function main() {
     process.exit(1);
   }
 
-  const connectionString = process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
+  const connectionString =
+    process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
   if (!connectionString) {
     throw new Error('Missing SUPABASE_DB_URL (or DATABASE_URL/POSTGRES_URL) in .env');
   }

@@ -46,7 +46,7 @@ async function touchGameLifecycle(request: AiMoveRequest, response: AiMoveRespon
 async function insertInferenceLog(
   request: AiMoveRequest,
   normalizedConfig: NormalizedEngineConfig,
-  response: AiMoveResponse
+  response: AiMoveResponse,
 ) {
   const selectedMoveText = response.selectedMove.notation ?? formatMoveText(response.selectedMove);
 
@@ -69,27 +69,24 @@ async function insertInferenceLog(
 
 async function upsertMove(request: AiMoveRequest, response: AiMoveResponse) {
   const move = response.selectedMove;
-  const { error } = await supabaseAdmin
-    .schema('game')
-    .from('moves')
-    .upsert(
-      {
-        game_id: request.gameId,
-        move_no: request.moveNo,
-        actor_side: request.position.sideToMove,
-        from_row: move.fromRow,
-        from_col: move.fromCol,
-        to_row: move.toRow,
-        to_col: move.toCol,
-        piece_code: move.pieceCode,
-        promote: move.promote,
-        drop_piece_code: move.dropPieceCode,
-        captured_piece_code: move.capturedPieceCode,
-        notation: move.notation,
-        thought_ms: response.meta.thinkMs,
-      },
-      { onConflict: 'game_id,move_no' }
-    );
+  const { error } = await supabaseAdmin.schema('game').from('moves').upsert(
+    {
+      game_id: request.gameId,
+      move_no: request.moveNo,
+      actor_side: request.position.sideToMove,
+      from_row: move.fromRow,
+      from_col: move.fromCol,
+      to_row: move.toRow,
+      to_col: move.toCol,
+      piece_code: move.pieceCode,
+      promote: move.promote,
+      drop_piece_code: move.dropPieceCode,
+      captured_piece_code: move.capturedPieceCode,
+      notation: move.notation,
+      thought_ms: response.meta.thinkMs,
+    },
+    { onConflict: 'game_id,move_no' },
+  );
 
   if (error) throw error;
 }
@@ -110,13 +107,14 @@ async function upsertPosition(request: AiMoveRequest) {
         sfen: request.position.sfen ?? null,
         state_hash: request.position.stateHash ?? null,
       },
-      { onConflict: 'game_id' }
+      { onConflict: 'game_id' },
     );
 
   if (error) throw error;
 }
 
 function formatMoveText(move: AiMoveResponse['selectedMove']): string {
-  const src = move.fromRow === null || move.fromCol === null ? 'drop' : `${move.fromRow},${move.fromCol}`;
+  const src =
+    move.fromRow === null || move.fromCol === null ? 'drop' : `${move.fromRow},${move.fromCol}`;
   return `${src}->${move.toRow},${move.toCol}:${move.pieceCode}`;
 }

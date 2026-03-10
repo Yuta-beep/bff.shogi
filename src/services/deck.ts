@@ -41,7 +41,9 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
 
     supabaseAdmin
       .from('player_decks')
-      .select('deck_id, name, created_at, updated_at, player_deck_placements(row_no, col_no, piece_id)')
+      .select(
+        'deck_id, name, created_at, updated_at, player_deck_placements(row_no, col_no, piece_id)',
+      )
       .eq('player_id', userId)
       .order('created_at', { ascending: true }),
   ]);
@@ -70,7 +72,10 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
     }
   }
 
-  const pieceById = new Map<number, { kanji: string; name: string; imageBucket: string | null; imageKey: string | null }>();
+  const pieceById = new Map<
+    number,
+    { kanji: string; name: string; imageBucket: string | null; imageKey: string | null }
+  >();
   if (pieceIds.size > 0) {
     const { data: pieceRows, error: pieceError } = await supabaseAdmin
       .schema('master')
@@ -96,7 +101,9 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
     if (!meta.imageBucket || !meta.imageKey) continue;
     const assetKey = `${meta.imageBucket}::${meta.imageKey}`;
     if (storageUrlByAsset.has(assetKey)) continue;
-    const { data, error } = await supabaseAdmin.storage.from(meta.imageBucket).createSignedUrl(meta.imageKey, signedUrlTtlSec);
+    const { data, error } = await supabaseAdmin.storage
+      .from(meta.imageBucket)
+      .createSignedUrl(meta.imageKey, signedUrlTtlSec);
     if (error) {
       storageUrlByAsset.set(assetKey, null);
       continue;
@@ -106,7 +113,8 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
 
   const ownedPieces: OwnedPieceRow[] = ownedRows.map((row) => {
     const meta = pieceById.get(row.piece_id);
-    const assetKey = meta?.imageBucket && meta?.imageKey ? `${meta.imageBucket}::${meta.imageKey}` : null;
+    const assetKey =
+      meta?.imageBucket && meta?.imageKey ? `${meta.imageBucket}::${meta.imageKey}` : null;
     return {
       pieceId: row.piece_id,
       char: meta?.kanji ?? '',
@@ -158,16 +166,14 @@ export async function saveDeck(userId: string, input: SaveDeckInput): Promise<nu
   const deckId = deck.deck_id as number;
 
   if (input.placements.length > 0) {
-    const { error: placementError } = await supabaseAdmin
-      .from('player_deck_placements')
-      .insert(
-        input.placements.map((p) => ({
-          deck_id: deckId,
-          row_no: p.rowNo,
-          col_no: p.colNo,
-          piece_id: p.pieceId,
-        }))
-      );
+    const { error: placementError } = await supabaseAdmin.from('player_deck_placements').insert(
+      input.placements.map((p) => ({
+        deck_id: deckId,
+        row_no: p.rowNo,
+        col_no: p.colNo,
+        piece_id: p.pieceId,
+      })),
+    );
 
     if (placementError) throw placementError;
   }

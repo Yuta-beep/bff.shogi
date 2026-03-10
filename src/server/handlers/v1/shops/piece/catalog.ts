@@ -10,6 +10,6 @@ export async function getPieceShopCatalog() {
     items: MOCK_SHOP_ITEMS,
     ...MOCK_SHOP_CURRENCY,
     owned: MOCK_SHOP_OWNED,
-    note: 'TEMP_MOCK_NO_CURRENCY_TABLE'
+    note: 'TEMP_MOCK_NO_CURRENCY_TABLE',
   });
 }

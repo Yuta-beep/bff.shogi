@@ -38,7 +38,10 @@ function loadEnvFile(filePath) {
     if (!key || process.env[key] !== undefined) continue;
 
     let value = trimmed.slice(eq + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
     process.env[key] = value;
@@ -86,15 +89,15 @@ function getShogiRoot() {
 }
 
 const FILENAME_OVERRIDES = {
-  '歩': '歩兵.png',
-  '香': '香車.png',
-  '桂': '桂馬.png',
-  '銀': '銀将.png',
-  '金': '金将.png',
-  '玉': '王将.png',
-  '王': '王将.png',
-  '角': '角行.png',
-  '飛': '飛車.png',
+  歩: '歩兵.png',
+  香: '香車.png',
+  桂: '桂馬.png',
+  銀: '銀将.png',
+  金: '金将.png',
+  玉: '王将.png',
+  王: '王将.png',
+  角: '角行.png',
+  飛: '飛車.png',
 };
 
 function resolveFileCandidates(pieceKanji, pieceName, dbImageKey) {
@@ -128,9 +131,12 @@ function findExistingFile(root, fileCandidates) {
 }
 
 function buildStoragePath(fileName, existingImageKey, pieceId) {
-  const rawPath = existingImageKey && existingImageKey.trim()
-    ? existingImageKey.trim().replace(/^\/+/, '')
-    : (prefix ? `${prefix}/${fileName}` : fileName);
+  const rawPath =
+    existingImageKey && existingImageKey.trim()
+      ? existingImageKey.trim().replace(/^\/+/, '')
+      : prefix
+        ? `${prefix}/${fileName}`
+        : fileName;
 
   if (isSafeStorageKey(rawPath)) {
     return rawPath;
@@ -199,13 +205,11 @@ async function updatePieceAssetRef(supabase, pieceId, storagePath) {
 async function uploadImage(supabase, storagePath, fullPath) {
   const binary = fs.readFileSync(fullPath);
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(storagePath, binary, {
-      upsert: true,
-      contentType: 'image/png',
-      cacheControl: '3600',
-    });
+  const { error } = await supabase.storage.from(bucket).upload(storagePath, binary, {
+    upsert: true,
+    contentType: 'image/png',
+    cacheControl: '3600',
+  });
 
   if (error) {
     throw new Error(`upload ${storagePath} failed: ${error.message}`);
@@ -248,7 +252,11 @@ async function main() {
       fullPath: found.fullPath,
       storagePath,
       nextBucket,
-      needsDbUpdate: updateDb && (piece.image_source !== 'supabase' || piece.image_bucket !== bucket || piece.image_key !== storagePath),
+      needsDbUpdate:
+        updateDb &&
+        (piece.image_source !== 'supabase' ||
+          piece.image_bucket !== bucket ||
+          piece.image_key !== storagePath),
     });
   }
 
@@ -270,7 +278,7 @@ async function main() {
       bucket: bucket,
       storage_path: row.storagePath,
       db_update: row.needsDbUpdate,
-    }))
+    })),
   );
 
   if (!shouldApply) {

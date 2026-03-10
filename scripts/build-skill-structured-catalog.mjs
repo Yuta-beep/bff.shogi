@@ -32,8 +32,9 @@ function splitSentences(text) {
 }
 
 function findPercents(text) {
-  return [...normalizePercent(text).matchAll(/(\d{1,3})\s*%/g)]
-    .map((m) => Math.max(0, Math.min(1, Number(m[1]) / 100)));
+  return [...normalizePercent(text).matchAll(/(\d{1,3})\s*%/g)].map((m) =>
+    Math.max(0, Math.min(1, Number(m[1]) / 100)),
+  );
 }
 
 function findDurationTurns(text) {
@@ -44,8 +45,16 @@ function findDurationTurns(text) {
 
 function inferTrigger(text) {
   const t = normalizePercent(text);
-  if (t.includes('取られた時') || t.includes('取られたとき') || t.includes('取られると')) return 'on_captured';
-  if (t.includes('敵駒を取った時') || t.includes('敵駒を取ったとき') || t.includes('取ったとき') || t.includes('取った時') || t.includes('取ると')) return 'on_capture';
+  if (t.includes('取られた時') || t.includes('取られたとき') || t.includes('取られると'))
+    return 'on_captured';
+  if (
+    t.includes('敵駒を取った時') ||
+    t.includes('敵駒を取ったとき') ||
+    t.includes('取ったとき') ||
+    t.includes('取った時') ||
+    t.includes('取ると')
+  )
+    return 'on_capture';
   if (t.includes('移動後')) return 'after_move';
   if (t.includes('移動時')) return 'on_move';
   if (t.includes('ターンごと')) return 'on_turn_start';
@@ -65,7 +74,8 @@ function inferTarget(text) {
   if (text.includes('持ち駒')) return 'hand_piece';
   if (text.includes('味方駒')) return 'ally_piece';
   if (text.includes('敵駒')) return 'enemy_piece';
-  if (text.includes('空きマス') || text.includes('盤面') || text.includes('マス')) return 'board_cell';
+  if (text.includes('空きマス') || text.includes('盤面') || text.includes('マス'))
+    return 'board_cell';
   if (text.includes('自分')) return 'self';
   return 'unspecified';
 }
@@ -76,15 +86,41 @@ function inferEffectType(sentence) {
   if (s.includes('変身') || s.includes('変化')) return 'transform_piece';
   if (s.includes('消滅')) return 'remove_piece';
   if (s.includes('行動不能') || s.includes('動けなく')) return 'apply_status';
-  if (s.includes('押し流す') || s.includes('押し出す') || s.includes('遠ざける') || s.includes('移動させる')) return 'forced_move';
+  if (
+    s.includes('押し流す') ||
+    s.includes('押し出す') ||
+    s.includes('遠ざける') ||
+    s.includes('移動させる')
+  )
+    return 'forced_move';
   if (s.includes('封印') || s.includes('阻害')) return 'seal_skill';
   if (s.includes('獲得')) return 'gain_piece';
   if (s.includes('コピー')) return 'copy_ability';
   if (s.includes('継承')) return 'inherit_ability';
-  if (s.includes('移動範囲') || s.includes('移動能力') || s.includes('移動可能') || s.includes('移動不可') || s.includes('継続移動')) return 'modify_movement';
-  if (s.includes('回避') || s.includes('取られない') || s.includes('攻撃できない') || s.includes('無敵')) return 'defense_or_immunity';
+  if (
+    s.includes('移動範囲') ||
+    s.includes('移動能力') ||
+    s.includes('移動可能') ||
+    s.includes('移動不可') ||
+    s.includes('継続移動')
+  )
+    return 'modify_movement';
+  if (
+    s.includes('回避') ||
+    s.includes('取られない') ||
+    s.includes('攻撃できない') ||
+    s.includes('無敵')
+  )
+    return 'defense_or_immunity';
   if (s.includes('無効化')) return 'disable_piece';
-  if (s.includes('毒マス') || s.includes('×マス') || s.includes('侵入不可') || s.includes('茨化') || s.includes('穴')) return 'board_hazard';
+  if (
+    s.includes('毒マス') ||
+    s.includes('×マス') ||
+    s.includes('侵入不可') ||
+    s.includes('茨化') ||
+    s.includes('穴')
+  )
+    return 'board_hazard';
   if (s.includes('復活')) return 'revive';
   if (s.includes('身代わり')) return 'substitute';
   if (s.includes('もう一度') || s.includes('2回行動')) return 'extra_action';
@@ -115,7 +151,11 @@ const MANUAL_SKILL_OVERRIDES = {
     triggerTiming: 'on_capture_attempt',
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'capture_with_leap', targetRule: 'enemy_piece', triggerTiming: 'on_capture_attempt' },
+      {
+        effectType: 'capture_with_leap',
+        targetRule: 'enemy_piece',
+        triggerTiming: 'on_capture_attempt',
+      },
     ],
   },
   '「泉」駒によって覚醒し、「辰」に変身する。': {
@@ -126,7 +166,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { condition: { type: 'ally_piece_exists', kanji: '泉' }, transformToKanji: '辰' },
     effects: [
-      { effectType: 'transform_piece', targetRule: 'self', triggerTiming: 'on_condition_met', valueText: '条件成立で辰に変身' },
+      {
+        effectType: 'transform_piece',
+        targetRule: 'self',
+        triggerTiming: 'on_condition_met',
+        valueText: '条件成立で辰に変身',
+      },
     ],
   },
   '移動時20％の確率で相手の手持ち駒を1つ燃やす。': {
@@ -137,7 +182,13 @@ const MANUAL_SKILL_OVERRIDES = {
     procChance: 0.2,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'destroy_hand_piece', targetRule: 'enemy_hand', triggerTiming: 'on_move', procChance: 0.2, valueNum: 1 },
+      {
+        effectType: 'destroy_hand_piece',
+        targetRule: 'enemy_hand',
+        triggerTiming: 'on_move',
+        procChance: 0.2,
+        valueNum: 1,
+      },
     ],
   },
   '壁で反射して継続移動する。': {
@@ -147,9 +198,7 @@ const MANUAL_SKILL_OVERRIDES = {
     triggerTiming: 'on_move',
     parseStatus: 'rule_only_v2',
     params: { reflection: true, continueUntilBlocked: true },
-    effects: [
-      { effectType: 'reflective_movement', targetRule: 'self', triggerTiming: 'on_move' },
-    ],
+    effects: [{ effectType: 'reflective_movement', targetRule: 'self', triggerTiming: 'on_move' }],
   },
   '敵駒に取られたとき、40％の確率で自分の手持ち駒に戻る': {
     skillType: 'active_or_triggered',
@@ -159,7 +208,12 @@ const MANUAL_SKILL_OVERRIDES = {
     procChance: 0.4,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'return_to_hand', targetRule: 'self', triggerTiming: 'on_captured', procChance: 0.4 },
+      {
+        effectType: 'return_to_hand',
+        targetRule: 'self',
+        triggerTiming: 'on_captured',
+        procChance: 0.4,
+      },
     ],
   },
   '周囲の敵駒を次の番まで闇で覆う。': {
@@ -170,7 +224,14 @@ const MANUAL_SKILL_OVERRIDES = {
     durationTurns: 1,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'apply_status', targetRule: 'adjacent_area', triggerTiming: 'passive', durationTurns: 1, radius: 1, valueText: 'dark_blind' },
+      {
+        effectType: 'apply_status',
+        targetRule: 'adjacent_area',
+        triggerTiming: 'passive',
+        durationTurns: 1,
+        radius: 1,
+        valueText: 'dark_blind',
+      },
     ],
   },
   '左右の「砂」駒と連携移動する。': {
@@ -181,7 +242,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { requiredAllyKanji: '砂', relativePositions: ['left', 'right'] },
     effects: [
-      { effectType: 'linked_action', targetRule: 'ally_piece', triggerTiming: 'on_move', valueText: 'sand_link_move' },
+      {
+        effectType: 'linked_action',
+        targetRule: 'ally_piece',
+        triggerTiming: 'on_move',
+        valueText: 'sand_link_move',
+      },
     ],
   },
   '移動時増殖する。': {
@@ -192,7 +258,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { summonPiece: 'self_clone', placement: 'adjacent_empty' },
     effects: [
-      { effectType: 'summon_piece', targetRule: 'board_cell', triggerTiming: 'on_move', valueText: 'self_clone' },
+      {
+        effectType: 'summon_piece',
+        targetRule: 'board_cell',
+        triggerTiming: 'on_move',
+        valueText: 'self_clone',
+      },
     ],
   },
   '縦横に1マス移動。敵の移動範囲を1ターン縦横1マスに制限する。': {
@@ -203,8 +274,19 @@ const MANUAL_SKILL_OVERRIDES = {
     durationTurns: 1,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'modify_movement', targetRule: 'self', triggerTiming: 'passive', valueText: 'orthogonal_step_1' },
-      { effectType: 'modify_movement', targetRule: 'enemy_piece', triggerTiming: 'passive', durationTurns: 1, valueText: 'restrict_orthogonal_step_1' },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'self',
+        triggerTiming: 'passive',
+        valueText: 'orthogonal_step_1',
+      },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'enemy_piece',
+        triggerTiming: 'passive',
+        durationTurns: 1,
+        valueText: 'restrict_orthogonal_step_1',
+      },
     ],
   },
   '周囲の敵駒の行動範囲を上下1マスのみにする。': {
@@ -214,7 +296,13 @@ const MANUAL_SKILL_OVERRIDES = {
     triggerTiming: 'passive',
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'modify_movement', targetRule: 'adjacent_area', triggerTiming: 'passive', radius: 1, valueText: 'restrict_vertical_step_1' },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'adjacent_area',
+        triggerTiming: 'passive',
+        radius: 1,
+        valueText: 'restrict_vertical_step_1',
+      },
     ],
   },
   '画数が10画以上の敵駒を無効化する。': {
@@ -225,7 +313,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { condition: { type: 'kanji_stroke_count_gte', value: 10 } },
     effects: [
-      { effectType: 'disable_piece', targetRule: 'enemy_piece', triggerTiming: 'passive', valueText: 'if_strokes_gte_10' },
+      {
+        effectType: 'disable_piece',
+        targetRule: 'enemy_piece',
+        triggerTiming: 'passive',
+        valueText: 'if_strokes_gte_10',
+      },
     ],
   },
   '移動時左右に岩の障害物を配置する。': {
@@ -236,7 +329,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { summonPieceKanji: '岩', positions: ['left', 'right'], blockMovement: true },
     effects: [
-      { effectType: 'summon_piece', targetRule: 'board_cell', triggerTiming: 'on_move', valueText: 'place_rock_left_right' },
+      {
+        effectType: 'summon_piece',
+        targetRule: 'board_cell',
+        triggerTiming: 'on_move',
+        valueText: 'place_rock_left_right',
+      },
     ],
   },
   '敵駒に取られても相手の持ち駒に加わらない。': {
@@ -246,7 +344,12 @@ const MANUAL_SKILL_OVERRIDES = {
     triggerTiming: 'on_captured',
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'capture_constraint', targetRule: 'self', triggerTiming: 'on_captured', valueText: 'not_added_to_enemy_hand' },
+      {
+        effectType: 'capture_constraint',
+        targetRule: 'self',
+        triggerTiming: 'on_captured',
+        valueText: 'not_added_to_enemy_hand',
+      },
     ],
   },
   '周囲の敵駒を20％の確率で相手の持ち駒に送る。': {
@@ -257,7 +360,14 @@ const MANUAL_SKILL_OVERRIDES = {
     procChance: 0.2,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'send_to_hand', targetRule: 'adjacent_area', triggerTiming: 'passive', procChance: 0.2, radius: 1, valueText: 'to_enemy_hand' },
+      {
+        effectType: 'send_to_hand',
+        targetRule: 'adjacent_area',
+        triggerTiming: 'passive',
+        procChance: 0.2,
+        radius: 1,
+        valueText: 'to_enemy_hand',
+      },
     ],
   },
   'ターンごとに移動能力が変化する。': {
@@ -268,7 +378,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { mode: 'cyclic_movement_pattern' },
     effects: [
-      { effectType: 'modify_movement', targetRule: 'self', triggerTiming: 'on_turn_start', valueText: 'cyclic_pattern_change' },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'self',
+        triggerTiming: 'on_turn_start',
+        valueText: 'cyclic_pattern_change',
+      },
     ],
   },
   '移動時後方の味方駒を連れていく。': {
@@ -279,7 +394,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { relativeSource: 'behind', action: 'pull_follow' },
     effects: [
-      { effectType: 'linked_action', targetRule: 'ally_piece', triggerTiming: 'on_move', valueText: 'pull_ally_behind' },
+      {
+        effectType: 'linked_action',
+        targetRule: 'ally_piece',
+        triggerTiming: 'on_move',
+        valueText: 'pull_ally_behind',
+      },
     ],
   },
   '隣接する駒が動いたらそれに連動して動く。': {
@@ -290,7 +410,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { watchedRange: 'adjacent', reaction: 'follow_move' },
     effects: [
-      { effectType: 'linked_action', targetRule: 'self', triggerTiming: 'on_other_piece_move', valueText: 'reactive_follow_move' },
+      {
+        effectType: 'linked_action',
+        targetRule: 'self',
+        triggerTiming: 'on_other_piece_move',
+        valueText: 'reactive_follow_move',
+      },
     ],
   },
   '味方駒を強化し敵駒から取られないようにする(5ターン持続)。味方の「竜」を覚醒させる。': {
@@ -301,8 +426,19 @@ const MANUAL_SKILL_OVERRIDES = {
     durationTurns: 5,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'buff', targetRule: 'ally_piece', triggerTiming: 'passive', durationTurns: 5, valueText: 'grant_uncapturable' },
-      { effectType: 'transform_piece', targetRule: 'ally_piece', triggerTiming: 'passive', valueText: 'awaken_ryu' },
+      {
+        effectType: 'buff',
+        targetRule: 'ally_piece',
+        triggerTiming: 'passive',
+        durationTurns: 5,
+        valueText: 'grant_uncapturable',
+      },
+      {
+        effectType: 'transform_piece',
+        targetRule: 'ally_piece',
+        triggerTiming: 'passive',
+        valueText: 'awaken_ryu',
+      },
     ],
   },
   '一手前に相手が移動させた駒と同じ移動範囲になる。': {
@@ -313,7 +449,12 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { source: 'last_enemy_moved_piece', copiedField: 'move_pattern' },
     effects: [
-      { effectType: 'copy_ability', targetRule: 'self', triggerTiming: 'on_turn_start', valueText: 'copy_last_enemy_move_pattern' },
+      {
+        effectType: 'copy_ability',
+        targetRule: 'self',
+        triggerTiming: 'on_turn_start',
+        valueText: 'copy_last_enemy_move_pattern',
+      },
     ],
   },
   '取られると相手駒を感染状態にし2ターン移動不能にする。': {
@@ -324,7 +465,13 @@ const MANUAL_SKILL_OVERRIDES = {
     durationTurns: 2,
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'apply_status', targetRule: 'enemy_piece', triggerTiming: 'on_captured', durationTurns: 2, valueText: 'infected_immobilized' },
+      {
+        effectType: 'apply_status',
+        targetRule: 'enemy_piece',
+        triggerTiming: 'on_captured',
+        durationTurns: 2,
+        valueText: 'infected_immobilized',
+      },
     ],
   },
   '移動後同じ行にいる味方駒の行動範囲が1マス伸びる。': {
@@ -335,7 +482,13 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { filter: 'same_row', deltaRange: 1 },
     effects: [
-      { effectType: 'modify_movement', targetRule: 'ally_piece', triggerTiming: 'after_move', valueNum: 1, valueText: 'extend_range_same_row' },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'ally_piece',
+        triggerTiming: 'after_move',
+        valueNum: 1,
+        valueText: 'extend_range_same_row',
+      },
     ],
   },
   '盤面の端まで貫通して移動する。': {
@@ -346,20 +499,38 @@ const MANUAL_SKILL_OVERRIDES = {
     parseStatus: 'rule_only_v2',
     params: { penetratingMove: true, maxRange: 'board_edge' },
     effects: [
-      { effectType: 'modify_movement', targetRule: 'self', triggerTiming: 'passive', valueText: 'penetrate_to_edge' },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'self',
+        triggerTiming: 'passive',
+        valueText: 'penetrate_to_edge',
+      },
     ],
   },
-  '周囲の味方駒のスキル発動確率を30％増加させる。味方の「陰」駒が同じ行や列にいるとき敵駒に取られない。': {
-    skillType: 'passive',
-    targetRule: 'ally_piece',
-    effectSummaryType: 'composite',
-    triggerTiming: 'passive',
-    parseStatus: 'rule_only_v2',
-    effects: [
-      { effectType: 'buff', targetRule: 'adjacent_area', triggerTiming: 'passive', radius: 1, valueNum: 0.3, valueText: 'skill_proc_chance_up' },
-      { effectType: 'defense_or_immunity', targetRule: 'self', triggerTiming: 'passive', valueText: 'uncapturable_if_ally_yin_same_row_or_col' },
-    ],
-  },
+  '周囲の味方駒のスキル発動確率を30％増加させる。味方の「陰」駒が同じ行や列にいるとき敵駒に取られない。':
+    {
+      skillType: 'passive',
+      targetRule: 'ally_piece',
+      effectSummaryType: 'composite',
+      triggerTiming: 'passive',
+      parseStatus: 'rule_only_v2',
+      effects: [
+        {
+          effectType: 'buff',
+          targetRule: 'adjacent_area',
+          triggerTiming: 'passive',
+          radius: 1,
+          valueNum: 0.3,
+          valueText: 'skill_proc_chance_up',
+        },
+        {
+          effectType: 'defense_or_immunity',
+          targetRule: 'self',
+          triggerTiming: 'passive',
+          valueText: 'uncapturable_if_ally_yin_same_row_or_col',
+        },
+      ],
+    },
   '後ろに移動した分前に行けるマスが増える。移動途中の駒を全て取る。': {
     skillType: 'active_or_triggered',
     targetRule: 'self',
@@ -367,8 +538,18 @@ const MANUAL_SKILL_OVERRIDES = {
     triggerTiming: 'on_move',
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'modify_movement', targetRule: 'self', triggerTiming: 'on_move', valueText: 'gain_forward_range_by_backward_steps' },
-      { effectType: 'multi_capture', targetRule: 'enemy_piece', triggerTiming: 'on_move', valueText: 'capture_all_pieces_on_path' },
+      {
+        effectType: 'modify_movement',
+        targetRule: 'self',
+        triggerTiming: 'on_move',
+        valueText: 'gain_forward_range_by_backward_steps',
+      },
+      {
+        effectType: 'multi_capture',
+        targetRule: 'enemy_piece',
+        triggerTiming: 'on_move',
+        valueText: 'capture_all_pieces_on_path',
+      },
     ],
   },
   '相手から取られない。特殊効果を受けない。移動時に移動先の2×2領域の敵駒をすべて取る。': {
@@ -378,9 +559,24 @@ const MANUAL_SKILL_OVERRIDES = {
     triggerTiming: 'passive',
     parseStatus: 'rule_only_v2',
     effects: [
-      { effectType: 'defense_or_immunity', targetRule: 'self', triggerTiming: 'passive', valueText: 'uncapturable' },
-      { effectType: 'defense_or_immunity', targetRule: 'self', triggerTiming: 'passive', valueText: 'immune_to_special_effects' },
-      { effectType: 'multi_capture', targetRule: 'board_cell', triggerTiming: 'on_move', valueText: 'capture_enemies_in_2x2_at_destination' },
+      {
+        effectType: 'defense_or_immunity',
+        targetRule: 'self',
+        triggerTiming: 'passive',
+        valueText: 'uncapturable',
+      },
+      {
+        effectType: 'defense_or_immunity',
+        targetRule: 'self',
+        triggerTiming: 'passive',
+        valueText: 'immune_to_special_effects',
+      },
+      {
+        effectType: 'multi_capture',
+        targetRule: 'board_cell',
+        triggerTiming: 'on_move',
+        valueText: 'capture_enemies_in_2x2_at_destination',
+      },
     ],
   },
 };
@@ -395,7 +591,8 @@ function applyManualOverride(desc, baseEntry) {
     effectType: fx.effectType ?? baseEntry.structured.effectSummaryType,
     targetRule: fx.targetRule ?? baseEntry.structured.targetRule,
     procChance: fx.procChance ?? override.procChance ?? baseEntry.structured.procChance ?? null,
-    durationTurns: fx.durationTurns ?? override.durationTurns ?? baseEntry.structured.durationTurns ?? null,
+    durationTurns:
+      fx.durationTurns ?? override.durationTurns ?? baseEntry.structured.durationTurns ?? null,
     radius: fx.radius ?? null,
     valueNum: fx.valueNum ?? null,
     valueText: fx.valueText ?? desc,
@@ -433,7 +630,8 @@ function buildSkillEntry(desc, index) {
 
   const effects = sentences.map((sentence, i) => {
     const effectPercents = findPercents(sentence);
-    const chance = effectPercents.length > 0 ? effectPercents[0] : (percents.length > 0 ? percents[0] : null);
+    const chance =
+      effectPercents.length > 0 ? effectPercents[0] : percents.length > 0 ? percents[0] : null;
     return {
       order: i + 1,
       triggerTiming: inferTrigger(sentence) === 'passive' ? trigger : inferTrigger(sentence),
@@ -441,7 +639,7 @@ function buildSkillEntry(desc, index) {
       targetRule: inferTarget(sentence) === 'unspecified' ? targetRule : inferTarget(sentence),
       procChance: chance,
       durationTurns: findDurationTurns(sentence) ?? durationTurns,
-      radius: sentence.includes('周囲8マス') ? 1 : (sentence.includes('周囲') ? 1 : null),
+      radius: sentence.includes('周囲8マス') ? 1 : sentence.includes('周囲') ? 1 : null,
       valueNum: null,
       valueText: sentence,
       params: {
@@ -505,7 +703,9 @@ function main() {
   };
 
   console.log(`[ok] Wrote: ${outFile}`);
-  console.log(`[info] total=${stats.total}, ruleOnly=${stats.ruleOnly}, hybrid=${stats.hybrid}, multiEffect=${stats.multiEffect}`);
+  console.log(
+    `[info] total=${stats.total}, ruleOnly=${stats.ruleOnly}, hybrid=${stats.hybrid}, multiEffect=${stats.multiEffect}`,
+  );
 }
 
 try {

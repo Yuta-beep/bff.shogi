@@ -43,11 +43,7 @@ async function countPlayerGames(supabase, userId) {
 }
 
 async function deletePlayerGames(supabase, userId) {
-  const { error } = await supabase
-    .schema('game')
-    .from('games')
-    .delete()
-    .eq('player_id', userId);
+  const { error } = await supabase.schema('game').from('games').delete().eq('player_id', userId);
 
   return { error };
 }

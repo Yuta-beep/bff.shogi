@@ -95,7 +95,11 @@ function parseStagesFromHtml(htmlPath) {
 }
 
 function isBoardPieceToken(token) {
-  return typeof token === 'string' && token.length >= 2 && (token.startsWith('C') || token.startsWith('P'));
+  return (
+    typeof token === 'string' &&
+    token.length >= 2 &&
+    (token.startsWith('C') || token.startsWith('P'))
+  );
 }
 
 function parseToken(token) {
@@ -288,13 +292,19 @@ async function main() {
     });
   }
 
-  const stageAll = await request('m_stage', { query: 'select=stage_id,stage_no&order=stage_no.asc&limit=1000' });
+  const stageAll = await request('m_stage', {
+    query: 'select=stage_id,stage_no&order=stage_no.asc&limit=1000',
+  });
   const pieceAll = await request('m_piece', { query: 'select=piece_id,kanji&limit=1000' });
 
   const stageIdByNo = new Map(stageAll.map((r) => [r.stage_no, r.stage_id]));
   const pieceIdByKanji = new Map(pieceAll.map((r) => [r.kanji, r.piece_id]));
 
-  const { stagePieceRows, placementRows, missingKanji } = buildStageDetailRows(stages, stageIdByNo, pieceIdByKanji);
+  const { stagePieceRows, placementRows, missingKanji } = buildStageDetailRows(
+    stages,
+    stageIdByNo,
+    pieceIdByKanji,
+  );
 
   const stageIds = stageRows
     .map((r) => stageIdByNo.get(r.stage_no))

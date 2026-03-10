@@ -11,9 +11,7 @@ export function optionsStageSelect() {
   return optionsResponse();
 }
 
-export function createPostStageSelect(
-  deps: StageSelectDeps = { getStageByNo, isPublishedNow }
-) {
+export function createPostStageSelect(deps: StageSelectDeps = { getStageByNo, isPublishedNow }) {
   return async function postStageSelect(stageNoRaw: string) {
     const stageNo = Number(stageNoRaw);
 

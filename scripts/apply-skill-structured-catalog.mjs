@@ -93,7 +93,9 @@ async function main() {
 
   const catalogPath = path.resolve(backendRoot, 'data/ability/skill_structured_catalog.json');
   if (!fs.existsSync(catalogPath)) {
-    throw new Error(`Catalog not found: ${catalogPath}. Run build-skill-structured-catalog.mjs first.`);
+    throw new Error(
+      `Catalog not found: ${catalogPath}. Run build-skill-structured-catalog.mjs first.`,
+    );
   }
 
   const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));

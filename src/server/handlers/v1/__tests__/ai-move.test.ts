@@ -23,9 +23,9 @@ describe('POST /api/v1/ai/move', () => {
       parseAiMoveRequest: (body) => body as any,
       executeAiTurn: async () =>
         ({
-        moveNo: 1,
-        move: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
-      }) as any,
+          moveNo: 1,
+          move: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
+        }) as any,
     });
     const response = await handler(
       jsonRequest('http://localhost/api/v1/ai/move', { gameId: 'g', moveNo: 1 }),

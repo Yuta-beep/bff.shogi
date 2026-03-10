@@ -115,15 +115,15 @@ function getShogiRoot() {
 }
 
 const FILENAME_OVERRIDES = {
-  '歩': '歩兵.png',
-  '香': '香車.png',
-  '桂': '桂馬.png',
-  '銀': '銀将.png',
-  '金': '金将.png',
-  '玉': '王将.png',
-  '王': '王将.png',
-  '角': '角行.png',
-  '飛': '飛車.png',
+  歩: '歩兵.png',
+  香: '香車.png',
+  桂: '桂馬.png',
+  銀: '銀将.png',
+  金: '金将.png',
+  玉: '王将.png',
+  王: '王将.png',
+  角: '角行.png',
+  飛: '飛車.png',
 };
 
 function resolveImageFileName(kanji, shogiRoot) {
@@ -155,7 +155,8 @@ function toImageKey(fileName) {
 async function loadPieces() {
   return request('m_piece', {
     method: 'GET',
-    query: 'select=piece_id,kanji,image_source,image_bucket,image_key,image_version&order=piece_id.asc',
+    query:
+      'select=piece_id,kanji,image_source,image_bucket,image_key,image_version&order=piece_id.asc',
   });
 }
 
@@ -205,16 +206,19 @@ async function main() {
     };
   });
 
-  const changed = planned.filter((item) => (
-    item.before.image_source !== item.after.image_source
-    || item.before.image_bucket !== item.after.image_bucket
-    || item.before.image_key !== item.after.image_key
-    || item.before.image_version !== item.after.image_version
-  ));
+  const changed = planned.filter(
+    (item) =>
+      item.before.image_source !== item.after.image_source ||
+      item.before.image_bucket !== item.after.image_bucket ||
+      item.before.image_key !== item.after.image_key ||
+      item.before.image_version !== item.after.image_version,
+  );
 
   console.log(`[info] Total pieces: ${planned.length}`);
   console.log(`[info] Changed rows: ${changed.length}`);
-  console.log(`[info] image_source=${imageSource} image_bucket=${imageBucket} image_prefix=${imagePrefix || '(none)'}`);
+  console.log(
+    `[info] image_source=${imageSource} image_bucket=${imageBucket} image_prefix=${imagePrefix || '(none)'}`,
+  );
 
   const preview = changed.slice(0, 20).map((item) => ({
     piece_id: item.pieceId,

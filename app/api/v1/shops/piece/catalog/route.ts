@@ -1,4 +1,7 @@
-import { getPieceShopCatalog, optionsPieceShopCatalog } from '@/server/handlers/v1/shops/piece/catalog';
+import {
+  getPieceShopCatalog,
+  optionsPieceShopCatalog,
+} from '@/server/handlers/v1/shops/piece/catalog';
 
 export const runtime = 'nodejs';
 

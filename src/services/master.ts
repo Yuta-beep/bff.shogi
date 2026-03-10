@@ -22,7 +22,7 @@ export async function listPublishedStages() {
     .schema('master')
     .from('m_stage')
     .select(
-      'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at'
+      'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
     )
     .order('stage_no', { ascending: true });
 
@@ -37,7 +37,7 @@ export async function getStageByNo(stageNo: number) {
     .schema('master')
     .from('m_stage')
     .select(
-      'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at'
+      'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
     )
     .eq('stage_no', stageNo)
     .limit(1)
@@ -60,7 +60,9 @@ export async function getStageBattleSetup(stageId: number) {
   const placementRes = await supabaseAdmin
     .schema('master')
     .from('m_stage_initial_placement')
-    .select('side,row_no,col_no,piece_id,m_piece:piece_id(piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key)')
+    .select(
+      'side,row_no,col_no,piece_id,m_piece:piece_id(piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key)',
+    )
     .eq('stage_id', stageId)
     .order('side', { ascending: true })
     .order('row_no', { ascending: true })
@@ -80,7 +82,9 @@ export async function getStageBattleSetup(stageId: number) {
   const rewardRes = await supabaseAdmin
     .schema('master')
     .from('m_stage_reward')
-    .select('reward_timing,quantity,drop_rate,sort_order,m_reward:reward_id(reward_code,reward_type,reward_name,item_code,piece_id)')
+    .select(
+      'reward_timing,quantity,drop_rate,sort_order,m_reward:reward_id(reward_code,reward_type,reward_name,item_code,piece_id)',
+    )
     .eq('stage_id', stageId)
     .order('sort_order', { ascending: true });
 
@@ -98,7 +102,9 @@ export async function getStageBattleSetup(stageId: number) {
     const cacheKey = `${bucket}::${key}`;
     if (storageUrlByAsset.has(cacheKey)) continue;
 
-    const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(key, signedUrlTtlSec);
+    const { data, error } = await supabaseAdmin.storage
+      .from(bucket)
+      .createSignedUrl(key, signedUrlTtlSec);
     if (error) {
       storageUrlByAsset.set(cacheKey, null);
       continue;
@@ -111,7 +117,10 @@ export async function getStageBattleSetup(stageId: number) {
       size: 9,
       placements: (placementRes.data ?? []).map((row: any) => {
         const piece = toPieceRow(row);
-        const assetKey = piece?.image_bucket && piece?.image_key ? `${piece.image_bucket}::${piece.image_key}` : null;
+        const assetKey =
+          piece?.image_bucket && piece?.image_key
+            ? `${piece.image_bucket}::${piece.image_key}`
+            : null;
         return {
           side: row.side,
           row: row.row_no,
@@ -162,8 +171,8 @@ export async function listPieceCatalog() {
     .from('m_piece')
     .select(
       'piece_id,kanji,name,piece_code,move_pattern_id,skill_id,is_active,published_at,unpublished_at,' +
-      'm_skill:skill_id(skill_name,skill_desc),' +
-      'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,m_move_pattern_vector(dx,dy,max_step))'
+        'm_skill:skill_id(skill_name,skill_desc),' +
+        'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,m_move_pattern_vector(dx,dy,max_step))',
     )
     .order('piece_id', { ascending: true });
 
@@ -192,13 +201,15 @@ export async function listPieceCatalog() {
     .filter((row: any) => isPublishedNow(row))
     .map((row: any) => {
       const pattern = row.m_move_pattern;
-      const vectors: { dx: number; dy: number; maxStep: number }[] = (pattern?.m_move_pattern_vector ?? []).map(
-        (v: any) => ({ dx: v.dx, dy: v.dy, maxStep: v.max_step })
-      );
+      const vectors: { dx: number; dy: number; maxStep: number }[] = (
+        pattern?.m_move_pattern_vector ?? []
+      ).map((v: any) => ({ dx: v.dx, dy: v.dy, maxStep: v.max_step }));
       return {
         char: row.kanji,
         name: row.name,
-        unlock: unlockStageByPieceId.has(row.piece_id) ? `Stage ${unlockStageByPieceId.get(row.piece_id)}` : '初期',
+        unlock: unlockStageByPieceId.has(row.piece_id)
+          ? `Stage ${unlockStageByPieceId.get(row.piece_id)}`
+          : '初期',
         desc: row.m_skill?.skill_desc ?? '',
         skill: row.m_skill?.skill_name ?? 'なし',
         move: pattern?.move_name ?? pattern?.move_code ?? '',

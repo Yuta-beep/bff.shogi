@@ -12,7 +12,9 @@
     "seed:piece-images": "node scripts/seed-master-piece-image-keys.mjs",
     "seed:piece-images:storage": "node scripts/upload-piece-images-to-storage.mjs",
     "reset:users": "node scripts/reset-auth-users.mjs",
-    "reset:users:apply": "node scripts/reset-auth-users.mjs --apply"
+    "reset:users:apply": "node scripts/reset-auth-users.mjs --apply",
+    "format": "biome format app src lib scripts docs .github package.json tsconfig.json next.config.ts README.md --write",
+    "format:check": "biome format app src lib scripts docs .github package.json tsconfig.json next.config.ts README.md"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
@@ -25,6 +27,7 @@
     "@types/node": "^22.14.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "@biomejs/biome": "^2.4.6"
   }
 }

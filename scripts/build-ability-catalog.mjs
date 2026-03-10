@@ -99,16 +99,114 @@ function parsePiecesFromHtml(htmlPath) {
 const MOVE_DEFS = {
   pawn: { kind: 'step', repeatable: false, jump: false, vectors: [[0, -1, 1]] },
   lance: { kind: 'ray', repeatable: true, jump: false, vectors: [[0, -1, 8]] },
-  knight: { kind: 'jump', repeatable: false, jump: true, vectors: [[-1, -2, 1], [1, -2, 1]] },
-  silver: { kind: 'step', repeatable: false, jump: false, vectors: [[-1, -1, 1], [0, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]] },
-  gold: { kind: 'step', repeatable: false, jump: false, vectors: [[-1, -1, 1], [0, -1, 1], [1, -1, 1], [-1, 0, 1], [1, 0, 1], [0, 1, 1]] },
-  bishop: { kind: 'ray', repeatable: true, jump: false, vectors: [[-1, -1, 8], [1, -1, 8], [-1, 1, 8], [1, 1, 8]] },
-  rook: { kind: 'ray', repeatable: true, jump: false, vectors: [[0, -1, 8], [0, 1, 8], [-1, 0, 8], [1, 0, 8]] },
-  king: { kind: 'step', repeatable: false, jump: false, vectors: [[-1, -1, 1], [0, -1, 1], [1, -1, 1], [-1, 0, 1], [1, 0, 1], [-1, 1, 1], [0, 1, 1], [1, 1, 1]] },
+  knight: {
+    kind: 'jump',
+    repeatable: false,
+    jump: true,
+    vectors: [
+      [-1, -2, 1],
+      [1, -2, 1],
+    ],
+  },
+  silver: {
+    kind: 'step',
+    repeatable: false,
+    jump: false,
+    vectors: [
+      [-1, -1, 1],
+      [0, -1, 1],
+      [1, -1, 1],
+      [-1, 1, 1],
+      [1, 1, 1],
+    ],
+  },
+  gold: {
+    kind: 'step',
+    repeatable: false,
+    jump: false,
+    vectors: [
+      [-1, -1, 1],
+      [0, -1, 1],
+      [1, -1, 1],
+      [-1, 0, 1],
+      [1, 0, 1],
+      [0, 1, 1],
+    ],
+  },
+  bishop: {
+    kind: 'ray',
+    repeatable: true,
+    jump: false,
+    vectors: [
+      [-1, -1, 8],
+      [1, -1, 8],
+      [-1, 1, 8],
+      [1, 1, 8],
+    ],
+  },
+  rook: {
+    kind: 'ray',
+    repeatable: true,
+    jump: false,
+    vectors: [
+      [0, -1, 8],
+      [0, 1, 8],
+      [-1, 0, 8],
+      [1, 0, 8],
+    ],
+  },
+  king: {
+    kind: 'step',
+    repeatable: false,
+    jump: false,
+    vectors: [
+      [-1, -1, 1],
+      [0, -1, 1],
+      [1, -1, 1],
+      [-1, 0, 1],
+      [1, 0, 1],
+      [-1, 1, 1],
+      [0, 1, 1],
+      [1, 1, 1],
+    ],
+  },
   run: { kind: 'step', repeatable: true, jump: false, vectors: [[0, -1, 2]] },
-  p: { kind: 'step', repeatable: false, jump: false, vectors: [[0, -1, 1], [0, 1, 1], [-1, 0, 1], [1, 0, 1]] },
-  dance: { kind: 'step', repeatable: false, jump: false, vectors: [[-1, -1, 1], [0, -1, 1], [1, -1, 1], [-1, 0, 1], [1, 0, 1], [0, 1, 1]] },
-  cry: { kind: 'step', repeatable: false, jump: false, vectors: [[-1, -1, 1], [0, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]] },
+  p: {
+    kind: 'step',
+    repeatable: false,
+    jump: false,
+    vectors: [
+      [0, -1, 1],
+      [0, 1, 1],
+      [-1, 0, 1],
+      [1, 0, 1],
+    ],
+  },
+  dance: {
+    kind: 'step',
+    repeatable: false,
+    jump: false,
+    vectors: [
+      [-1, -1, 1],
+      [0, -1, 1],
+      [1, -1, 1],
+      [-1, 0, 1],
+      [1, 0, 1],
+      [0, 1, 1],
+    ],
+  },
+  cry: {
+    kind: 'step',
+    repeatable: false,
+    jump: false,
+    vectors: [
+      [-1, -1, 1],
+      [0, -1, 1],
+      [1, -1, 1],
+      [-1, 1, 1],
+      [1, 1, 1],
+    ],
+  },
 };
 
 const SCRIPT_HOOK_BY_KANJI = {
@@ -163,7 +261,8 @@ function inferEffectType(text) {
   if (text.includes('行動不能') || text.includes('動けなく')) return 'status_apply';
   if (text.includes('召喚') || text.includes('出現')) return 'summon';
   if (text.includes('変化') || text.includes('変身')) return 'transform';
-  if (text.includes('移動範囲') || text.includes('移動不可') || text.includes('移動')) return 'movement_control';
+  if (text.includes('移動範囲') || text.includes('移動不可') || text.includes('移動'))
+    return 'movement_control';
   if (text.includes('消滅') || text.includes('取る')) return 'damage_or_remove';
   if (text.includes('回復') || text.includes('強化') || text.includes('無敵')) return 'buff';
   return 'scripted';
@@ -213,31 +312,34 @@ function buildCatalog(pieces) {
           needsScript: true,
         };
 
-    const skill = p.skillText === 'なし'
-      ? {
-          code: null,
-          description: p.skillText,
-          triggerTiming: 'none',
-          effectType: 'none',
-          targetRule: 'none',
-          procChance: null,
-          params: {},
-          scriptHook: null,
-          parseStatus: 'complete',
-        }
-      : {
-          code: `skill_${Buffer.from(p.kanji).toString('hex')}`,
-          description: p.skillText,
-          triggerTiming,
-          effectType,
-          targetRule,
-          procChance: chance,
-          params: {
-            source: 'heuristic_parse_v1',
-          },
-          scriptHook: SCRIPT_HOOK_BY_KANJI[p.kanji] ?? null,
-          parseStatus: SCRIPT_HOOK_BY_KANJI[p.kanji] ? 'hybrid_rule_and_script' : 'rule_only_needs_review',
-        };
+    const skill =
+      p.skillText === 'なし'
+        ? {
+            code: null,
+            description: p.skillText,
+            triggerTiming: 'none',
+            effectType: 'none',
+            targetRule: 'none',
+            procChance: null,
+            params: {},
+            scriptHook: null,
+            parseStatus: 'complete',
+          }
+        : {
+            code: `skill_${Buffer.from(p.kanji).toString('hex')}`,
+            description: p.skillText,
+            triggerTiming,
+            effectType,
+            targetRule,
+            procChance: chance,
+            params: {
+              source: 'heuristic_parse_v1',
+            },
+            scriptHook: SCRIPT_HOOK_BY_KANJI[p.kanji] ?? null,
+            parseStatus: SCRIPT_HOOK_BY_KANJI[p.kanji]
+              ? 'hybrid_rule_and_script'
+              : 'rule_only_needs_review',
+          };
 
     return {
       piece: {
@@ -288,7 +390,9 @@ function main() {
   };
 
   console.log(`[ok] Wrote: ${outFile}`);
-  console.log(`[info] total=${summary.total}, customMove=${summary.customMove}, noSkill=${summary.noSkill}, scriptedSkill=${summary.scriptedSkill}`);
+  console.log(
+    `[info] total=${summary.total}, customMove=${summary.customMove}, noSkill=${summary.noSkill}, scriptedSkill=${summary.scriptedSkill}`,
+  );
 }
 
 try {

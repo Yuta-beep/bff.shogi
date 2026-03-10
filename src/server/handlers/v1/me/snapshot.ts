@@ -10,6 +10,6 @@ export async function getMeSnapshot() {
     rating: 1200,
     pawnCurrency: 0,
     goldCurrency: 0,
-    note: 'TEMP_MOCK_NO_USER_TABLE'
+    note: 'TEMP_MOCK_NO_USER_TABLE',
   });
 }

@@ -29,7 +29,9 @@ describe('POST /api/v1/games', () => {
         startedAt: '2026-03-10T00:00:00.000Z',
       }),
     });
-    const response = await handler(jsonRequest('http://localhost/api/v1/games', { playerId: 'u-1' }));
+    const response = await handler(
+      jsonRequest('http://localhost/api/v1/games', { playerId: 'u-1' }),
+    );
     const payload = await readJson(response);
 
     expect(response.status).toBe(200);
@@ -50,7 +52,9 @@ describe('POST /api/v1/games', () => {
         throw new CreateGameSessionError('CREATE_GAME_FAILED', 'db failed');
       },
     });
-    const response = await handler(jsonRequest('http://localhost/api/v1/games', { playerId: 'u-1' }));
+    const response = await handler(
+      jsonRequest('http://localhost/api/v1/games', { playerId: 'u-1' }),
+    );
     const payload = await readJson(response);
 
     expect(response.status).toBe(500);
