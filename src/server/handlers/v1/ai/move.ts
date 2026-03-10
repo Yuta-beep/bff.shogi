@@ -35,6 +35,14 @@ export async function postAiMove(req: Request) {
   } catch (error: any) {
     const message = error?.message ?? 'Failed to get AI move';
 
+    console.error('[api/v1/ai/move]', {
+      message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      stack: error?.stack,
+    });
+
     if (
       message.startsWith('INVALID_REQUEST:') ||
       message.includes('must be') ||
@@ -42,8 +50,27 @@ export async function postAiMove(req: Request) {
     ) {
       return jsonError('INVALID_ENGINE_CONFIG', message, 400);
     }
+
     if (message.startsWith('GAME_NOT_FOUND:')) {
       return jsonError('GAME_NOT_FOUND', message, 404);
+    }
+
+    const aiHttpMatch = message.match(/^AI_ENGINE_HTTP_(\d+):\s*([\s\S]*)$/);
+    if (aiHttpMatch) {
+      const upstreamStatus = Number(aiHttpMatch[1]);
+      const upstreamMessage = aiHttpMatch[2]?.trim() || 'AI engine returned an error';
+      if (upstreamStatus >= 400 && upstreamStatus < 500) {
+        return jsonError('AI_ENGINE_BAD_REQUEST', upstreamMessage, upstreamStatus);
+      }
+      return jsonError('AI_ENGINE_UPSTREAM', upstreamMessage, 502);
+    }
+
+    if (
+      message.includes('fetch failed') ||
+      message.includes('ECONNREFUSED') ||
+      message.includes('ENOTFOUND')
+    ) {
+      return jsonError('AI_ENGINE_UNREACHABLE', message, 502);
     }
 
     return jsonError('ENGINE_INTERNAL', message, 500);
