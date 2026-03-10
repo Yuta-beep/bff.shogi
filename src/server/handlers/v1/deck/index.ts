@@ -1,6 +1,6 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getDeckSnapshot, saveDeck, deleteDeck } from '@/services/deck';
+import { deleteDeck, getDeckSnapshot, saveDeck, upsertDeck } from '@/services/deck';
 
 export async function resolveUserId(req: Request): Promise<string | null> {
   const auth = req.headers.get('Authorization') ?? '';
@@ -20,6 +20,7 @@ type DeckDeps = {
   resolveUserId: typeof resolveUserId;
   getDeckSnapshot: typeof getDeckSnapshot;
   saveDeck: typeof saveDeck;
+  upsertDeck: typeof upsertDeck;
   deleteDeck: typeof deleteDeck;
 };
 
@@ -27,6 +28,7 @@ const defaultDeckDeps: DeckDeps = {
   resolveUserId,
   getDeckSnapshot,
   saveDeck,
+  upsertDeck,
   deleteDeck,
 };
 
@@ -49,6 +51,58 @@ type SaveDeckBody = {
   placements?: { rowNo: number; colNo: number; pieceId: number }[];
 };
 
+function isValidPlacement(
+  placement: unknown,
+): placement is { rowNo: number; colNo: number; pieceId: number } {
+  if (!placement || typeof placement !== 'object') return false;
+  const target = placement as { rowNo?: unknown; colNo?: unknown; pieceId?: unknown };
+
+  const isRowValid =
+    typeof target.rowNo === 'number' &&
+    Number.isInteger(target.rowNo) &&
+    target.rowNo >= 0 &&
+    target.rowNo <= 2;
+  const isColValid =
+    typeof target.colNo === 'number' &&
+    Number.isInteger(target.colNo) &&
+    target.colNo >= 0 &&
+    target.colNo <= 8;
+  const isPieceValid =
+    typeof target.pieceId === 'number' && Number.isInteger(target.pieceId) && target.pieceId > 0;
+
+  return isRowValid && isColValid && isPieceValid;
+}
+
+function parseSaveDeckBody(body: SaveDeckBody) {
+  if (!body.name?.trim()) {
+    return { ok: false as const, error: jsonError('INVALID_INPUT', 'name is required', 400) };
+  }
+  if (!Array.isArray(body.placements)) {
+    return {
+      ok: false as const,
+      error: jsonError('INVALID_INPUT', 'placements must be an array', 400),
+    };
+  }
+  if (!body.placements.every((placement) => isValidPlacement(placement))) {
+    return {
+      ok: false as const,
+      error: jsonError(
+        'INVALID_INPUT',
+        'placements must contain valid rowNo(0..2), colNo(0..8), pieceId',
+        400,
+      ),
+    };
+  }
+
+  return {
+    ok: true as const,
+    value: {
+      name: body.name.trim(),
+      placements: body.placements,
+    },
+  };
+}
+
 export function createPostDeck(deps: DeckDeps = defaultDeckDeps) {
   return async function postDeck(req: Request) {
     const userId = await deps.resolveUserId(req);
@@ -61,21 +115,38 @@ export function createPostDeck(deps: DeckDeps = defaultDeckDeps) {
       return jsonError('INVALID_JSON', 'Request body must be JSON', 400);
     }
 
-    if (!body.name?.trim()) {
-      return jsonError('INVALID_INPUT', 'name is required', 400);
-    }
-    if (!Array.isArray(body.placements)) {
-      return jsonError('INVALID_INPUT', 'placements must be an array', 400);
-    }
+    const parsed = parseSaveDeckBody(body);
+    if (!parsed.ok) return parsed.error;
 
     try {
-      const deckId = await deps.saveDeck(userId, {
-        name: body.name.trim(),
-        placements: body.placements,
-      });
+      const deckId = await deps.saveDeck(userId, parsed.value);
       return jsonOk({ deckId });
     } catch (error: any) {
       return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to save deck', 500);
+    }
+  };
+}
+
+export function createPutDeck(deps: DeckDeps = defaultDeckDeps) {
+  return async function putDeck(req: Request) {
+    const userId = await deps.resolveUserId(req);
+    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+
+    let body: SaveDeckBody;
+    try {
+      body = (await req.json()) as SaveDeckBody;
+    } catch {
+      return jsonError('INVALID_JSON', 'Request body must be JSON', 400);
+    }
+
+    const parsed = parseSaveDeckBody(body);
+    if (!parsed.ok) return parsed.error;
+
+    try {
+      const deckId = await deps.upsertDeck(userId, parsed.value);
+      return jsonOk({ deckId });
+    } catch (error: any) {
+      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to upsert deck', 500);
     }
   };
 }
@@ -104,4 +175,5 @@ export function createDeleteDeckHandler(deps: DeckDeps = defaultDeckDeps) {
 
 export const getDeck = createGetDeck();
 export const postDeck = createPostDeck();
+export const putDeck = createPutDeck();
 export const deleteDeckHandler = createDeleteDeckHandler();

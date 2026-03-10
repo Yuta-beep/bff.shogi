@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 
-import { createDeleteDeckHandler, createGetDeck, createPostDeck } from '../deck';
+import { createDeleteDeckHandler, createGetDeck, createPostDeck, createPutDeck } from '../deck';
 import { invalidJsonRequest, jsonRequest, readJson } from './test-utils';
 
 const baseDeps = {
   resolveUserId: async () => 'user-1',
   getDeckSnapshot: async () => ({ ownedPieces: [], decks: [] }),
   saveDeck: async () => 42,
+  upsertDeck: async () => 7,
   deleteDeck: async () => {},
 };
 
@@ -50,5 +51,34 @@ describe('/api/v1/deck', () => {
     const okPayload = await readJson(ok);
     expect(ok.status).toBe(200);
     expect(okPayload).toEqual({ ok: true, data: { deleted: true } });
+  });
+
+  it('PUT validates payload and returns deckId on success', async () => {
+    const handler = createPutDeck(baseDeps);
+
+    const badJson = await handler(invalidJsonRequest('http://localhost/api/v1/deck'));
+    const badJsonPayload = await readJson(badJson);
+    expect(badJson.status).toBe(400);
+    expect(badJsonPayload.error.code).toBe('INVALID_JSON');
+
+    const badPlacement = await handler(
+      jsonRequest('http://localhost/api/v1/deck', {
+        name: 'マイデッキ',
+        placements: [{ rowNo: 7, colNo: 0, pieceId: 1 }],
+      }),
+    );
+    const badPlacementPayload = await readJson(badPlacement);
+    expect(badPlacement.status).toBe(400);
+    expect(badPlacementPayload.error.code).toBe('INVALID_INPUT');
+
+    const ok = await handler(
+      jsonRequest('http://localhost/api/v1/deck', {
+        name: 'マイデッキ',
+        placements: [{ rowNo: 2, colNo: 4, pieceId: 11 }],
+      }),
+    );
+    const okPayload = await readJson(ok);
+    expect(ok.status).toBe(200);
+    expect(okPayload).toEqual({ ok: true, data: { deckId: 7 } });
   });
 });

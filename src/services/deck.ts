@@ -181,6 +181,63 @@ export async function saveDeck(userId: string, input: SaveDeckInput): Promise<nu
   return deckId;
 }
 
+export async function upsertDeck(userId: string, input: SaveDeckInput): Promise<number> {
+  const { data: existingDecks, error: existingDeckError } = await supabaseAdmin
+    .from('player_decks')
+    .select('deck_id')
+    .eq('player_id', userId)
+    .eq('name', input.name)
+    .order('deck_id', { ascending: true })
+    .limit(1);
+
+  if (existingDeckError) throw existingDeckError;
+
+  let deckId = (existingDecks?.[0]?.deck_id as number | undefined) ?? null;
+
+  if (!deckId) {
+    const { data: deck, error: createDeckError } = await supabaseAdmin
+      .from('player_decks')
+      .insert({ player_id: userId, name: input.name })
+      .select('deck_id')
+      .single();
+
+    if (createDeckError) throw createDeckError;
+    deckId = deck.deck_id as number;
+  }
+
+  const { error: deletePlacementError } = await supabaseAdmin
+    .from('player_deck_placements')
+    .delete()
+    .eq('deck_id', deckId);
+
+  if (deletePlacementError) throw deletePlacementError;
+
+  if (input.placements.length > 0) {
+    const { error: insertPlacementError } = await supabaseAdmin
+      .from('player_deck_placements')
+      .insert(
+        input.placements.map((p) => ({
+          deck_id: deckId,
+          row_no: p.rowNo,
+          col_no: p.colNo,
+          piece_id: p.pieceId,
+        })),
+      );
+
+    if (insertPlacementError) throw insertPlacementError;
+  }
+
+  const { error: updateDeckError } = await supabaseAdmin
+    .from('player_decks')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('deck_id', deckId)
+    .eq('player_id', userId);
+
+  if (updateDeckError) throw updateDeckError;
+
+  return deckId;
+}
+
 export async function deleteDeck(userId: string, deckId: number): Promise<void> {
   const { error } = await supabaseAdmin
     .from('player_decks')
