@@ -5,6 +5,7 @@ export type OwnedPieceRow = {
   char: string;
   name: string;
   imageSignedUrl: string | null;
+  quantity: number;
   acquiredAt: string;
   source: string;
 };
@@ -35,7 +36,7 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   const [ownedRes, decksRes] = await Promise.all([
     supabaseAdmin
       .from('player_owned_pieces')
-      .select('piece_id, acquired_at, source')
+      .select('piece_id, quantity, acquired_at, source')
       .eq('player_id', userId)
       .order('acquired_at', { ascending: true }),
 
@@ -53,6 +54,7 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
 
   const ownedRows = (ownedRes.data ?? []) as Array<{
     piece_id: number;
+    quantity: number;
     acquired_at: string;
     source: string;
   }>;
@@ -120,6 +122,7 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
       char: meta?.kanji ?? '',
       name: meta?.name ?? '',
       imageSignedUrl: assetKey ? (storageUrlByAsset.get(assetKey) ?? null) : null,
+      quantity: row.quantity ?? 1,
       acquiredAt: row.acquired_at,
       source: row.source,
     };
