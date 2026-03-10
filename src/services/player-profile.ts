@@ -1,0 +1,31 @@
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+export type PlayerSnapshot = {
+  displayName: string | null;
+  rating: number;
+  pawnCurrency: number;
+  goldCurrency: number;
+  playerRank: number;
+  playerExp: number;
+};
+
+export async function getPlayerSnapshot(userId: string): Promise<PlayerSnapshot | null> {
+  const { data, error } = await supabaseAdmin
+    .from('players')
+    .select('display_name,rating,pawn_currency,gold_currency,player_rank,player_exp')
+    .eq('id', userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    displayName: (data.display_name as string | null) ?? null,
+    rating: Number(data.rating ?? 1500),
+    pawnCurrency: Number(data.pawn_currency ?? 0),
+    goldCurrency: Number(data.gold_currency ?? 0),
+    playerRank: Number(data.player_rank ?? 1),
+    playerExp: Number(data.player_exp ?? 0),
+  };
+}

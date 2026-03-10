@@ -1,22 +1,49 @@
 import { describe, expect, it } from 'bun:test';
 
-import { getMeSnapshot } from '../me/snapshot';
+import { createGetMeSnapshot } from '../me/snapshot';
 import { readJson } from './test-utils';
 
 describe('GET /api/v1/me/snapshot', () => {
-  it('returns fixed mock contract', async () => {
-    const response = await getMeSnapshot();
+  it('returns 401 when auth is missing', async () => {
+    const handler = createGetMeSnapshot({
+      resolveUserId: async () => null,
+      getPlayerSnapshot: async () => null,
+    });
+    const response = await handler(new Request('http://localhost/api/v1/me/snapshot'));
+    const payload = await readJson(response);
+
+    expect(response.status).toBe(401);
+    expect(payload).toEqual({
+      ok: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    });
+  });
+
+  it('returns db-backed snapshot with rank/exp', async () => {
+    const handler = createGetMeSnapshot({
+      resolveUserId: async () => 'user-1',
+      getPlayerSnapshot: async () => ({
+        displayName: '将棋太郎',
+        rating: 1500,
+        pawnCurrency: 0,
+        goldCurrency: 0,
+        playerRank: 1,
+        playerExp: 0,
+      }),
+    });
+    const response = await handler(new Request('http://localhost/api/v1/me/snapshot'));
     const payload = await readJson(response);
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({
       ok: true,
       data: {
-        playerName: 'プレイヤー名',
-        rating: 1200,
+        playerName: '将棋太郎',
+        rating: 1500,
         pawnCurrency: 0,
         goldCurrency: 0,
-        note: 'TEMP_MOCK_NO_USER_TABLE',
+        playerRank: 1,
+        playerExp: 0,
       },
     });
   });
