@@ -20,35 +20,46 @@ export function optionsCreateGame() {
   return optionsResponse();
 }
 
-export async function postCreateGame(req: Request) {
-  let body: CreateGameRequest;
-  try {
-    body = (await req.json()) as CreateGameRequest;
-  } catch {
-    return jsonError('INVALID_JSON', 'Request body must be valid JSON', 400);
-  }
+type PostCreateGameDeps = {
+  resolveStageId: (stageNo?: number) => Promise<number | null>;
+  createGameSession: typeof createGameSession;
+};
 
-  const playerId = body?.playerId;
-  if (!playerId || typeof playerId !== 'string') {
-    return jsonError('INVALID_PLAYER_ID', 'playerId is required', 400);
-  }
-
-  try {
-    const stageId = await resolveStageId(body.stageNo);
-    const session = await createGameSession({
-      playerId,
-      stageId,
-      initialPosition: body.initialPosition,
-    });
-
-    return jsonOk(session);
-  } catch (error: any) {
-    if (error instanceof CreateGameSessionError) {
-      return jsonError(error.code, error.message, 500);
+export function createPostCreateGame(
+  deps: PostCreateGameDeps = { resolveStageId, createGameSession }
+) {
+  return async function postCreateGame(req: Request) {
+    let body: CreateGameRequest;
+    try {
+      body = (await req.json()) as CreateGameRequest;
+    } catch {
+      return jsonError('INVALID_JSON', 'Request body must be valid JSON', 400);
     }
-    return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to create game', 500);
-  }
+
+    const playerId = body?.playerId;
+    if (!playerId || typeof playerId !== 'string') {
+      return jsonError('INVALID_PLAYER_ID', 'playerId is required', 400);
+    }
+
+    try {
+      const stageId = await deps.resolveStageId(body.stageNo);
+      const session = await deps.createGameSession({
+        playerId,
+        stageId,
+        initialPosition: body.initialPosition,
+      });
+
+      return jsonOk(session);
+    } catch (error: any) {
+      if (error instanceof CreateGameSessionError) {
+        return jsonError(error.code, error.message, 500);
+      }
+      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to create game', 500);
+    }
+  };
 }
+
+export const postCreateGame = createPostCreateGame();
 
 async function resolveStageId(stageNo?: number): Promise<number | null> {
   if (!Number.isInteger(stageNo) || (stageNo ?? 0) <= 0) {
