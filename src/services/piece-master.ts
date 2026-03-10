@@ -47,7 +47,7 @@ export async function listPieceCatalog() {
           ? `Stage ${unlockStageByPieceId.get(row.piece_id)}`
           : '初期',
         desc: row.m_skill?.skill_desc ?? '',
-        skill: row.m_skill?.skill_name ?? 'なし',
+        skill: row.m_skill?.skill_desc ?? 'なし',
         move: pattern?.move_name ?? pattern?.move_code ?? '',
         moveVectors: vectors,
         isRepeatable: pattern?.is_repeatable ?? false,
