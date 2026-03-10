@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 export const OPTIONS = optionsStageSelect;
 
-export async function POST(req: Request, context: { params: Promise<{ stageNo: string }> | { stageNo: string } }) {
-  const params = await Promise.resolve(context.params);
-  return postStageSelect(params.stageNo);
+export async function POST(_req: Request, context: { params: Promise<{ stageNo: string }> }) {
+  const { stageNo } = await context.params;
+  return postStageSelect(stageNo);
 }

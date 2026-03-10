@@ -4,6 +4,7 @@ export type OwnedPieceRow = {
   pieceId: number;
   char: string;
   name: string;
+  imageSignedUrl: string | null;
   acquiredAt: string;
   source: string;
 };
@@ -14,6 +15,7 @@ export type DeckPlacement = {
   pieceId: number;
   char: string;
   name: string;
+  imageSignedUrl: string | null;
 };
 
 export type DeckRow = {
@@ -33,13 +35,13 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   const [ownedRes, decksRes] = await Promise.all([
     supabaseAdmin
       .from('player_owned_pieces')
-      .select('piece_id, acquired_at, source, m_piece:piece_id(kanji, name)')
+      .select('piece_id, acquired_at, source')
       .eq('player_id', userId)
       .order('acquired_at', { ascending: true }),
 
     supabaseAdmin
       .from('player_decks')
-      .select('deck_id, name, created_at, updated_at, player_deck_placements(row_no, col_no, piece_id, m_piece:piece_id(kanji, name))')
+      .select('deck_id, name, created_at, updated_at, player_deck_placements(row_no, col_no, piece_id)')
       .eq('player_id', userId)
       .order('created_at', { ascending: true }),
   ]);
@@ -47,26 +49,93 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   if (ownedRes.error) throw ownedRes.error;
   if (decksRes.error) throw decksRes.error;
 
-  const ownedPieces: OwnedPieceRow[] = (ownedRes.data ?? []).map((row: any) => ({
-    pieceId: row.piece_id,
-    char: row.m_piece?.kanji ?? '',
-    name: row.m_piece?.name ?? '',
-    acquiredAt: row.acquired_at,
-    source: row.source,
-  }));
+  const ownedRows = (ownedRes.data ?? []) as Array<{
+    piece_id: number;
+    acquired_at: string;
+    source: string;
+  }>;
+  const deckRows = (decksRes.data ?? []) as Array<{
+    deck_id: number;
+    name: string;
+    created_at: string;
+    updated_at: string;
+    player_deck_placements?: Array<{ row_no: number; col_no: number; piece_id: number }>;
+  }>;
 
-  const decks: DeckRow[] = (decksRes.data ?? []).map((row: any) => ({
+  const pieceIds = new Set<number>();
+  for (const row of ownedRows) pieceIds.add(row.piece_id);
+  for (const deck of deckRows) {
+    for (const placement of deck.player_deck_placements ?? []) {
+      pieceIds.add(placement.piece_id);
+    }
+  }
+
+  const pieceById = new Map<number, { kanji: string; name: string; imageBucket: string | null; imageKey: string | null }>();
+  if (pieceIds.size > 0) {
+    const { data: pieceRows, error: pieceError } = await supabaseAdmin
+      .schema('master')
+      .from('m_piece')
+      .select('piece_id, kanji, name, image_bucket, image_key')
+      .in('piece_id', Array.from(pieceIds));
+
+    if (pieceError) throw pieceError;
+
+    for (const piece of pieceRows ?? []) {
+      pieceById.set(piece.piece_id as number, {
+        kanji: (piece.kanji as string) ?? '',
+        name: (piece.name as string) ?? '',
+        imageBucket: (piece.image_bucket as string | null) ?? null,
+        imageKey: (piece.image_key as string | null) ?? null,
+      });
+    }
+  }
+
+  const storageUrlByAsset = new Map<string, string | null>();
+  const signedUrlTtlSec = 60 * 60;
+  for (const meta of pieceById.values()) {
+    if (!meta.imageBucket || !meta.imageKey) continue;
+    const assetKey = `${meta.imageBucket}::${meta.imageKey}`;
+    if (storageUrlByAsset.has(assetKey)) continue;
+    const { data, error } = await supabaseAdmin.storage.from(meta.imageBucket).createSignedUrl(meta.imageKey, signedUrlTtlSec);
+    if (error) {
+      storageUrlByAsset.set(assetKey, null);
+      continue;
+    }
+    storageUrlByAsset.set(assetKey, data?.signedUrl ?? null);
+  }
+
+  const ownedPieces: OwnedPieceRow[] = ownedRows.map((row) => {
+    const meta = pieceById.get(row.piece_id);
+    const assetKey = meta?.imageBucket && meta?.imageKey ? `${meta.imageBucket}::${meta.imageKey}` : null;
+    return {
+      pieceId: row.piece_id,
+      char: meta?.kanji ?? '',
+      name: meta?.name ?? '',
+      imageSignedUrl: assetKey ? (storageUrlByAsset.get(assetKey) ?? null) : null,
+      acquiredAt: row.acquired_at,
+      source: row.source,
+    };
+  });
+
+  const decks: DeckRow[] = deckRows.map((row) => ({
     deckId: row.deck_id,
     name: row.name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    placements: (row.player_deck_placements ?? []).map((p: any) => ({
-      rowNo: p.row_no,
-      colNo: p.col_no,
-      pieceId: p.piece_id,
-      char: p.m_piece?.kanji ?? '',
-      name: p.m_piece?.name ?? '',
-    })),
+    placements: (row.player_deck_placements ?? []).map((p) => {
+      const meta = pieceById.get(p.piece_id);
+      return {
+        rowNo: p.row_no,
+        colNo: p.col_no,
+        pieceId: p.piece_id,
+        char: meta?.kanji ?? '',
+        name: meta?.name ?? '',
+        imageSignedUrl:
+          meta?.imageBucket && meta?.imageKey
+            ? (storageUrlByAsset.get(`${meta.imageBucket}::${meta.imageKey}`) ?? null)
+            : null,
+      };
+    }),
   }));
 
   return { ownedPieces, decks };

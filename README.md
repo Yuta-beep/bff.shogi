@@ -24,6 +24,7 @@ npm run dev
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `AI_ENGINE_BASE_URL`（例: `http://127.0.0.1:8080`）
 
 ※ `EXPO_PUBLIC_SUPABASE_URL` が入っていても動作しますが、BFF用途では `SUPABASE_URL` を推奨。
 
@@ -52,6 +53,9 @@ npm run dev
 
 ### 7) Piece shop purchase（仮実装）
 - `POST /api/v1/shops/piece/purchase`
+
+### 8) AI move（Phase1）
+- `POST /api/v1/ai/move`
 
 ## Notes
 - 現時点でユーザー進行/通貨/所持テーブルは未導入のため、該当APIはモックまたは暫定判定です。

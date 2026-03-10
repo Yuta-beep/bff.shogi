@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * 開発用: auth.users と public.players を全削除するリセットスクリプト。
- * players は auth.users の CASCADE DELETE で自動的に削除される。
+ * 開発用: auth.users と関連レコードを削除するリセットスクリプト。
  *
  * Usage:
  *   node scripts/reset-auth-users.mjs          # dry run（一覧表示のみ）
@@ -25,6 +24,34 @@ function createAdminClient() {
   });
 }
 
+function printSupabaseError(prefix, error) {
+  if (!error) return;
+  console.error(`${prefix}: ${error.message}`);
+  if (error.code) console.error(`    code: ${error.code}`);
+  if (error.details) console.error(`    details: ${error.details}`);
+  if (error.hint) console.error(`    hint: ${error.hint}`);
+}
+
+async function countPlayerGames(supabase, userId) {
+  const { count, error } = await supabase
+    .schema('game')
+    .from('games')
+    .select('*', { count: 'exact', head: true })
+    .eq('player_id', userId);
+
+  return { count: count ?? 0, error };
+}
+
+async function deletePlayerGames(supabase, userId) {
+  const { error } = await supabase
+    .schema('game')
+    .from('games')
+    .delete()
+    .eq('player_id', userId);
+
+  return { error };
+}
+
 async function main() {
   const supabase = createAdminClient();
 
@@ -33,10 +60,17 @@ async function main() {
 
   const users = data.users;
   console.log(`Found ${users.length} user(s)`);
-  users.forEach((u) => {
-    const label = u.is_anonymous ? 'anonymous' : (u.email ?? u.id);
-    console.log(`  - ${u.id}  (${label})`);
-  });
+
+  for (const user of users) {
+    const label = user.is_anonymous ? 'anonymous' : (user.email ?? user.id);
+    const { count, error } = await countPlayerGames(supabase, user.id);
+    if (error) {
+      console.log(`  - ${user.id}  (${label}) [game.games: unknown]`);
+      printSupabaseError('    game.games count failed', error);
+    } else {
+      console.log(`  - ${user.id}  (${label}) [game.games: ${count}]`);
+    }
+  }
 
   if (!shouldApply) {
     console.log('\nDry run. Pass --apply to actually delete.');
@@ -44,17 +78,23 @@ async function main() {
   }
 
   let deleted = 0;
+
   for (const user of users) {
+    const { error: gameDeleteError } = await deletePlayerGames(supabase, user.id);
+    if (gameDeleteError) {
+      printSupabaseError(`  ! cleanup failed for game.games user=${user.id}`, gameDeleteError);
+    }
+
     const { error } = await supabase.auth.admin.deleteUser(user.id);
     if (error) {
-      console.error(`  ✗ ${user.id}: ${error.message}`);
+      printSupabaseError(`  ✗ ${user.id}`, error);
     } else {
       console.log(`  ✓ deleted ${user.id}`);
-      deleted++;
+      deleted += 1;
     }
   }
 
-  console.log(`\nDeleted ${deleted}/${users.length} user(s). players rows cascade-deleted.`);
+  console.log(`\nDeleted ${deleted}/${users.length} user(s).`);
 }
 
 main().catch((err) => {

@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 export const OPTIONS = optionsBattleSetup;
 
-export async function GET(req: Request, context: { params: Promise<{ stageNo: string }> | { stageNo: string } }) {
-  const params = await Promise.resolve(context.params);
-  return getBattleSetup(params.stageNo);
+export async function GET(_req: Request, context: { params: Promise<{ stageNo: string }> }) {
+  const { stageNo } = await context.params;
+  return getBattleSetup(stageNo);
 }
