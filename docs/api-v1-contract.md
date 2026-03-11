@@ -29,6 +29,12 @@
 - Errors:
   - `500 INTERNAL_ERROR`
 
+### `GET /api/v1/stages/progress`
+- Success `200`: `data = { clearedStageNos: number[] }`
+- Errors:
+  - `401 UNAUTHORIZED`
+  - `500 INTERNAL_ERROR`
+
 ### `POST /api/v1/stages/:stageNo/select`
 - Success `200`:
   - `{ canStart: true, note: "NO_USER_PROGRESS_TABLE_YET" }`
@@ -47,6 +53,15 @@
 
 ### `GET /api/v1/pieces/catalog`
 - Success `200`: `data = { items: PieceCatalogItem[] }`
+- `PieceCatalogItem` 主要フィールド:
+  - `pieceId`, `pieceCode`, `moveCode`
+  - `char`, `name`, `unlock`
+  - `desc`, `skill`
+  - `move` (人間向け移動説明)
+  - `moveVectors: [{ dx, dy, maxStep }]`
+  - `isRepeatable`, `canJump`
+  - `moveConstraints` (JSON)
+  - `moveRules: [{ ruleType, priority, params }]`
 - Errors:
   - `500 INTERNAL_ERROR`
 
@@ -85,3 +100,15 @@
 - Errors:
   - `400 INVALID_JSON | INVALID_ITEM_KEY`
   - `404 ITEM_NOT_FOUND`
+
+### `POST /api/v1/stages/:stageNo/clear`
+- Success `200`: `data = { stageNo, firstClear, clearCount, granted: { pawn, gold, pieces }, wallet: { pawnCurrency, goldCurrency } }`
+- Reward source:
+  - master definition: `master.m_stage_reward` (`first_clear` / `clear`) + `master.m_reward` (`currency` / `piece`)
+  - player progress: `public.player_stage_clears` (`clear_count`)
+- Errors:
+  - `400 INVALID_STAGE_NO`
+  - `401 UNAUTHORIZED`
+  - `403 LOCKED`
+  - `404 NOT_FOUND`
+  - `500 INTERNAL_ERROR`
