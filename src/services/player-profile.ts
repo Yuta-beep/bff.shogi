@@ -29,3 +29,31 @@ export async function getPlayerSnapshot(userId: string): Promise<PlayerSnapshot 
     playerExp: Number(data.player_exp ?? 0),
   };
 }
+
+export async function getPlayerDisplayName(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('players')
+    .select('display_name')
+    .eq('id', userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.display_name as string | null) ?? null;
+}
+
+export async function upsertPlayerDisplayName(userId: string, displayName: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('players')
+    .upsert(
+      {
+        id: userId,
+        display_name: displayName,
+      },
+      { onConflict: 'id' },
+    )
+    .select('id')
+    .single();
+
+  if (error) throw error;
+}

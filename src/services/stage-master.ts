@@ -46,7 +46,12 @@ export async function getStageByNo(stageNo: number) {
   return data as StageRow;
 }
 
-export async function getStageBattleSetup(stageId: number) {
+export async function getStageBattleSetup(stageId: number, playerId?: string | null) {
+  const boardSize = 9;
+  const deckRowCount = 3;
+  const playerDeckRowOffset = boardSize - deckRowCount;
+  const toBoardRowFromDeck = (rowNo: number) =>
+    rowNo >= 0 && rowNo < deckRowCount ? rowNo + playerDeckRowOffset : rowNo;
   const toPieceRow = (row: any) => {
     if (Array.isArray(row?.m_piece)) {
       return row.m_piece[0] ?? null;
@@ -66,6 +71,84 @@ export async function getStageBattleSetup(stageId: number) {
     .order('col_no', { ascending: true });
 
   if (placementRes.error) throw placementRes.error;
+
+  const stagePlacementRows = (placementRes.data ?? []) as any[];
+  let playerPlacementRowsFromDeck: any[] = [];
+
+  if (playerId) {
+    try {
+      const deckRes = await supabaseAdmin
+        .from('player_decks')
+        .select('deck_id,name,player_deck_placements(row_no,col_no,piece_id)')
+        .eq('player_id', playerId)
+        .order('deck_id', { ascending: true });
+
+      if (!deckRes.error) {
+        const deckList = (deckRes.data ?? []) as Array<{
+          deck_id: number;
+          name: string;
+          player_deck_placements?: Array<{ row_no: number; col_no: number; piece_id: number }>;
+        }>;
+        const targetDeck =
+          deckList.find(
+            (deck) => deck.name === 'マイデッキ' && (deck.player_deck_placements?.length ?? 0) > 0,
+          ) ?? deckList.find((deck) => (deck.player_deck_placements?.length ?? 0) > 0);
+
+        if (targetDeck?.player_deck_placements && targetDeck.player_deck_placements.length > 0) {
+          const pieceIds = [
+            ...new Set(
+              targetDeck.player_deck_placements
+                .map((p) => p.piece_id)
+                .filter((id): id is number => typeof id === 'number'),
+            ),
+          ];
+          if (pieceIds.length > 0) {
+            const pieceRes = await supabaseAdmin
+              .schema('master')
+              .from('m_piece')
+              .select(
+                'piece_id,piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key',
+              )
+              .in('piece_id', pieceIds);
+
+            if (!pieceRes.error) {
+              const pieceById = new Map<number, any>(
+                (pieceRes.data ?? []).map((piece: any) => [piece.piece_id, piece]),
+              );
+              playerPlacementRowsFromDeck = targetDeck.player_deck_placements
+                .map((placement) => {
+                  const piece = pieceById.get(placement.piece_id);
+                  if (!piece) return null;
+                  const rowNo = Number(placement.row_no);
+                  const colNo = Number(placement.col_no);
+                  if (!Number.isInteger(rowNo) || !Number.isInteger(colNo)) {
+                    return null;
+                  }
+                  return {
+                    side: 'player',
+                    row_no: toBoardRowFromDeck(rowNo),
+                    col_no: colNo,
+                    piece_id: placement.piece_id,
+                    m_piece: piece,
+                  };
+                })
+                .filter((row): row is any => row !== null);
+            }
+          }
+        }
+      }
+    } catch {
+      playerPlacementRowsFromDeck = [];
+    }
+  }
+
+  const mergedPlacementRows =
+    playerPlacementRowsFromDeck.length > 0
+      ? [
+          ...stagePlacementRows.filter((row) => row.side === 'enemy'),
+          ...playerPlacementRowsFromDeck,
+        ]
+      : stagePlacementRows;
 
   const rosterRes = await supabaseAdmin
     .schema('master')
@@ -90,7 +173,7 @@ export async function getStageBattleSetup(stageId: number) {
   const storageUrlByAsset = new Map<string, string | null>();
   const signedUrlTtlSec = 60 * 60;
 
-  for (const row of placementRes.data ?? []) {
+  for (const row of mergedPlacementRows) {
     const piece = toPieceRow(row);
     const bucket = piece?.image_bucket as string | null | undefined;
     const key = piece?.image_key as string | null | undefined;
@@ -112,7 +195,7 @@ export async function getStageBattleSetup(stageId: number) {
   return {
     board: {
       size: 9,
-      placements: (placementRes.data ?? []).map((row: any) => {
+      placements: mergedPlacementRows.map((row: any) => {
         const piece = toPieceRow(row);
         const assetKey =
           piece?.image_bucket && piece?.image_key

@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { isPublishedNow } from '@/lib/time';
 import { getStageBattleSetup, getStageByNo } from '@/services/stage-master';
 
@@ -15,7 +16,7 @@ export function optionsBattleSetup() {
 export function createGetBattleSetup(
   deps: BattleSetupDeps = { getStageByNo, isPublishedNow, getStageBattleSetup },
 ) {
-  return async function getBattleSetup(stageNoRaw: string) {
+  return async function getBattleSetup(stageNoRaw: string, req?: Request) {
     const stageNo = Number(stageNoRaw);
 
     if (!Number.isInteger(stageNo) || stageNo <= 0) {
@@ -31,7 +32,17 @@ export function createGetBattleSetup(
         return jsonError('LOCKED', `Stage ${stageNo} is locked`, 403);
       }
 
-      const setup = await deps.getStageBattleSetup(stage.stage_id);
+      let userId: string | null = null;
+      const auth = req?.headers.get('Authorization') ?? '';
+      const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+      if (token) {
+        const { data, error } = await supabaseAdmin.auth.getUser(token);
+        if (!error && data?.user?.id) {
+          userId = data.user.id;
+        }
+      }
+
+      const setup = await deps.getStageBattleSetup(stage.stage_id, userId);
 
       return jsonOk({
         stage: {

@@ -11,7 +11,7 @@ export function jsonError(code: string, message: string, status = 400, init?: Re
 export function withCors(init?: ResponseInit): ResponseInit {
   const headers = new Headers(init?.headers);
   headers.set('Access-Control-Allow-Origin', '*');
-  headers.set('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   return { ...init, headers };
 }

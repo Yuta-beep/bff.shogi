@@ -4,6 +4,8 @@ declare module 'bun:test' {
   export function expect(value: any): {
     toBe(expected: any): void;
     toEqual(expected: any): void;
+    toContain(expected: any): void;
+    toBeGreaterThanOrEqual(expected: number): void;
     toHaveProperty(path: string, value?: any): void;
   };
 }
