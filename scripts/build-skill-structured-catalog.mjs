@@ -143,6 +143,13 @@ function inferScriptHook(desc) {
   return null;
 }
 
+function normalizeSkillType(value) {
+  if (value === 'active_or_passive') return value;
+  if (value === 'passive') return 'active_or_passive';
+  if (value === 'active_or_triggered') return 'active_or_passive';
+  return 'active_or_passive';
+}
+
 const MANUAL_SKILL_OVERRIDES = {
   '敵駒を取るときは駒を1つまたぐ。': {
     skillType: 'active_or_triggered',
@@ -603,7 +610,7 @@ function applyManualOverride(desc, baseEntry) {
     ...baseEntry,
     structured: {
       ...baseEntry.structured,
-      skillType: override.skillType ?? baseEntry.structured.skillType,
+      skillType: normalizeSkillType(override.skillType ?? baseEntry.structured.skillType),
       targetRule: override.targetRule ?? baseEntry.structured.targetRule,
       effectSummaryType: override.effectSummaryType ?? baseEntry.structured.effectSummaryType,
       procChance: override.procChance ?? baseEntry.structured.procChance,
@@ -650,7 +657,7 @@ function buildSkillEntry(desc, index) {
 
   const effectTypes = [...new Set(effects.map((e) => e.effectType))];
   const summaryType = effectTypes.length === 1 ? effectTypes[0] : 'composite';
-  const skillType = trigger === 'passive' ? 'passive' : 'active_or_triggered';
+  const skillType = normalizeSkillType(trigger === 'passive' ? 'passive' : 'active_or_triggered');
 
   const baseEntry = {
     id: index + 1,
