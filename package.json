@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:unit": "bun test",
+    "skills:v2:catalog": "node scripts/apply-skill-definition-v2-catalog.mjs",
+    "skills:v2:catalog:apply": "node scripts/apply-skill-definition-v2-catalog.mjs --apply",
     "seed:piece-images": "node scripts/seed-master-piece-image-keys.mjs",
     "seed:piece-images:storage": "node scripts/upload-piece-images-to-storage.mjs",
     "reset:users": "node scripts/reset-auth-users.mjs",

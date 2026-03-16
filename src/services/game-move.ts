@@ -1,0 +1,432 @@
+import { applyAiMove } from '@/lib/ai-engine-client';
+import type {
+  AiMove,
+  AiMoveRequest,
+  AiMoveResponse,
+  AiPosition,
+  CanonicalPosition,
+  CommittedMoveResponse,
+  GameStatusSnapshot,
+} from '@/lib/ai-engine-contract';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import type { NormalizedEngineConfig } from '@/lib/engine-config';
+import { attachSkillEffectsToAiRequest } from '@/services/ai-skill-effects';
+
+type PersistedPositionRow = {
+  game_id: string;
+  board_state: Record<string, unknown>;
+  hands: Record<string, unknown>;
+  side_to_move: 'player' | 'enemy';
+  turn_number: number;
+  move_count: number;
+  sfen: string | null;
+  state_hash: string | null;
+};
+
+type PersistedGameRow = {
+  game_id: string;
+  status: GameStatusSnapshot['status'];
+  result: GameStatusSnapshot['result'];
+  winner_side: GameStatusSnapshot['winnerSide'];
+};
+
+type LoadedGameState = {
+  gameId: string;
+  position: CanonicalPosition;
+  game: GameStatusSnapshot;
+};
+
+type CommitGameMoveInput = {
+  gameId: string;
+  moveNo: number;
+  actorSide: 'player' | 'enemy';
+  move: AiMove;
+  stateHash?: string | null;
+  thoughtMs?: number | null;
+  currentPosition?: AiPosition;
+  aiInference?: {
+    normalizedConfig: NormalizedEngineConfig;
+    requestPayload: AiMoveRequest;
+    responsePayload: AiMoveResponse;
+  };
+};
+
+type CommitGameMoveDeps = {
+  loadGameState: (gameId: string) => Promise<LoadedGameState>;
+  enrichPosition: (
+    gameId: string,
+    position: CanonicalPosition,
+    moveNo: number,
+  ) => Promise<AiPosition>;
+  applyMove: (input: { position: AiPosition; selectedMove: AiMove }) => Promise<CanonicalPosition>;
+  persistMove: (input: {
+    gameId: string;
+    moveNo: number;
+    actorSide: 'player' | 'enemy';
+    move: AiMove;
+    thoughtMs?: number | null;
+    position: CanonicalPosition;
+    game: GameStatusSnapshot;
+  }) => Promise<void>;
+  insertInferenceLog: (input: {
+    gameId: string;
+    moveNo: number;
+    normalizedConfig: NormalizedEngineConfig;
+    requestPayload: AiMoveRequest;
+    responsePayload: AiMoveResponse;
+  }) => Promise<void>;
+};
+
+export class CommitGameMoveError extends Error {
+  readonly code:
+    | 'GAME_NOT_FOUND'
+    | 'GAME_ALREADY_FINISHED'
+    | 'TURN_MISMATCH'
+    | 'MOVE_NO_MISMATCH'
+    | 'STALE_POSITION'
+    | 'INVALID_POSITION';
+
+  constructor(
+    code:
+      | 'GAME_NOT_FOUND'
+      | 'GAME_ALREADY_FINISHED'
+      | 'TURN_MISMATCH'
+      | 'MOVE_NO_MISMATCH'
+      | 'STALE_POSITION'
+      | 'INVALID_POSITION',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'CommitGameMoveError';
+    this.code = code;
+  }
+}
+
+export function createCommitGameMove(
+  deps: CommitGameMoveDeps = {
+    loadGameState,
+    enrichPosition,
+    applyMove: applyCanonicalMove,
+    persistMove,
+    insertInferenceLog,
+  },
+) {
+  return async function commitGameMove(input: CommitGameMoveInput): Promise<CommittedMoveResponse> {
+    const gameState = await deps.loadGameState(input.gameId);
+    if (gameState.game.status !== 'in_progress') {
+      throw new CommitGameMoveError('GAME_ALREADY_FINISHED', 'game is already finished');
+    }
+
+    const expectedMoveNo = gameState.position.moveCount + 1;
+    if (input.moveNo !== expectedMoveNo) {
+      throw new CommitGameMoveError(
+        'MOVE_NO_MISMATCH',
+        `expected moveNo ${expectedMoveNo} but got ${input.moveNo}`,
+      );
+    }
+    if (input.actorSide !== gameState.position.sideToMove) {
+      throw new CommitGameMoveError(
+        'TURN_MISMATCH',
+        `expected actorSide ${gameState.position.sideToMove} but got ${input.actorSide}`,
+      );
+    }
+    if (
+      input.stateHash &&
+      gameState.position.stateHash &&
+      input.stateHash !== gameState.position.stateHash
+    ) {
+      throw new CommitGameMoveError('STALE_POSITION', 'stateHash does not match current position');
+    }
+
+    const currentPosition =
+      input.currentPosition ??
+      (await deps.enrichPosition(input.gameId, gameState.position, expectedMoveNo));
+    const normalizedMove = withCapturedPieceCode(currentPosition, input.move);
+    const nextPosition = await deps.applyMove({
+      position: currentPosition,
+      selectedMove: normalizedMove,
+    });
+    const nextGame = deriveGameStatus(nextPosition);
+
+    await deps.persistMove({
+      gameId: input.gameId,
+      moveNo: expectedMoveNo,
+      actorSide: input.actorSide,
+      move: normalizedMove,
+      thoughtMs: input.thoughtMs ?? null,
+      position: nextPosition,
+      game: nextGame,
+    });
+
+    if (input.aiInference) {
+      await deps.insertInferenceLog({
+        gameId: input.gameId,
+        moveNo: expectedMoveNo,
+        normalizedConfig: input.aiInference.normalizedConfig,
+        requestPayload: input.aiInference.requestPayload,
+        responsePayload: input.aiInference.responsePayload,
+      });
+    }
+
+    return {
+      moveNo: expectedMoveNo,
+      actorSide: input.actorSide,
+      move: normalizedMove,
+      position: nextPosition,
+      game: nextGame,
+    };
+  };
+}
+
+export const commitGameMove = createCommitGameMove();
+
+export async function loadGameState(gameId: string): Promise<LoadedGameState> {
+  const { data: positionRow, error: positionError } = await supabaseAdmin
+    .schema('game')
+    .from('positions')
+    .select('game_id,board_state,hands,side_to_move,turn_number,move_count,sfen,state_hash')
+    .eq('game_id', gameId)
+    .maybeSingle<PersistedPositionRow>();
+  if (positionError) throw positionError;
+
+  const { data: gameRow, error: gameError } = await supabaseAdmin
+    .schema('game')
+    .from('games')
+    .select('game_id,status,result,winner_side')
+    .eq('game_id', gameId)
+    .maybeSingle<PersistedGameRow>();
+  if (gameError) throw gameError;
+
+  if (!positionRow || !gameRow) {
+    throw new CommitGameMoveError('GAME_NOT_FOUND', `game not found: ${gameId}`);
+  }
+
+  return {
+    gameId,
+    position: {
+      sideToMove: positionRow.side_to_move,
+      turnNumber: positionRow.turn_number,
+      moveCount: positionRow.move_count,
+      sfen: positionRow.sfen,
+      stateHash: positionRow.state_hash,
+      boardState: positionRow.board_state ?? {},
+      hands: positionRow.hands ?? {},
+    },
+    game: {
+      status: gameRow.status,
+      result: gameRow.result,
+      winnerSide: gameRow.winner_side,
+    },
+  };
+}
+
+export async function enrichPosition(
+  gameId: string,
+  position: CanonicalPosition,
+  moveNo: number,
+): Promise<AiPosition> {
+  const enriched = await attachSkillEffectsToAiRequest({
+    gameId,
+    moveNo,
+    position: {
+      ...position,
+      legalMoves: [],
+    },
+  });
+  return enriched.position;
+}
+
+async function applyCanonicalMove(input: {
+  position: AiPosition;
+  selectedMove: AiMove;
+}): Promise<CanonicalPosition> {
+  const response = await applyAiMove(input);
+  return response.position;
+}
+
+async function persistMove(input: {
+  gameId: string;
+  moveNo: number;
+  actorSide: 'player' | 'enemy';
+  move: AiMove;
+  thoughtMs?: number | null;
+  position: CanonicalPosition;
+  game: GameStatusSnapshot;
+}) {
+  const { error: moveError } = await supabaseAdmin
+    .schema('game')
+    .from('moves')
+    .upsert(
+      {
+        game_id: input.gameId,
+        move_no: input.moveNo,
+        actor_side: input.actorSide,
+        from_row: input.move.fromRow,
+        from_col: input.move.fromCol,
+        to_row: input.move.toRow,
+        to_col: input.move.toCol,
+        piece_code: input.move.pieceCode,
+        promote: input.move.promote,
+        drop_piece_code: input.move.dropPieceCode,
+        captured_piece_code: input.move.capturedPieceCode,
+        notation: input.move.notation,
+        thought_ms: input.thoughtMs ?? null,
+      },
+      { onConflict: 'game_id,move_no' },
+    );
+  if (moveError) throw moveError;
+
+  const { error: positionError } = await supabaseAdmin
+    .schema('game')
+    .from('positions')
+    .upsert(
+      {
+        game_id: input.gameId,
+        board_state: input.position.boardState,
+        hands: input.position.hands,
+        side_to_move: input.position.sideToMove,
+        turn_number: input.position.turnNumber,
+        move_count: input.position.moveCount,
+        sfen: input.position.sfen ?? null,
+        state_hash: input.position.stateHash ?? null,
+      },
+      { onConflict: 'game_id' },
+    );
+  if (positionError) throw positionError;
+
+  const updatePayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    status: input.game.status,
+    result: input.game.result,
+    winner_side: input.game.winnerSide,
+    ended_at: input.game.status === 'finished' ? new Date().toISOString() : null,
+  };
+  const { error: gameError } = await supabaseAdmin
+    .schema('game')
+    .from('games')
+    .update(updatePayload)
+    .eq('game_id', input.gameId);
+  if (gameError) throw gameError;
+}
+
+async function insertInferenceLog(input: {
+  gameId: string;
+  moveNo: number;
+  normalizedConfig: NormalizedEngineConfig;
+  requestPayload: AiMoveRequest;
+  responsePayload: AiMoveResponse;
+}) {
+  const selectedMoveText =
+    input.responsePayload.selectedMove.notation ??
+    formatMoveText(input.responsePayload.selectedMove);
+
+  const { error } = await supabaseAdmin.schema('game').from('ai_inference_logs').insert({
+    game_id: input.gameId,
+    move_no: input.moveNo,
+    engine_version: input.responsePayload.meta.engineVersion,
+    engine_config: input.normalizedConfig,
+    request_payload: input.requestPayload,
+    response_payload: input.responsePayload,
+    selected_move: selectedMoveText,
+    eval_cp: input.responsePayload.meta.evalCp,
+    searched_nodes: input.responsePayload.meta.searchedNodes,
+    search_depth: input.responsePayload.meta.searchDepth,
+    think_ms: input.responsePayload.meta.thinkMs,
+  });
+  if (error) throw error;
+}
+
+function withCapturedPieceCode(position: CanonicalPosition, move: AiMove): AiMove {
+  if (move.capturedPieceCode || move.dropPieceCode) {
+    return move;
+  }
+  const capturedPieceCode = pieceCodeAt(position.sfen ?? null, move.toRow, move.toCol);
+  return {
+    ...move,
+    capturedPieceCode,
+  };
+}
+
+function pieceCodeAt(sfen: string | null, row: number, col: number): string | null {
+  if (!sfen || row < 0 || row > 8 || col < 0 || col > 8) return null;
+  const board = sfen.split(' ')[0] ?? '';
+  const ranks = board.split('/');
+  if (ranks.length !== 9) return null;
+  const rank = ranks[row] ?? '';
+  let file = 0;
+  let promoted = false;
+
+  for (const ch of rank) {
+    if (ch === '+') {
+      promoted = true;
+      continue;
+    }
+    if (/\d/.test(ch)) {
+      file += Number(ch);
+      continue;
+    }
+    if (file === col) {
+      const code = sfenCharToPieceCode(ch);
+      return code;
+    }
+    file += 1;
+    promoted = false;
+  }
+
+  return null;
+}
+
+function sfenCharToPieceCode(ch: string): string | null {
+  switch (ch.toUpperCase()) {
+    case 'P':
+      return 'FU';
+    case 'L':
+      return 'KY';
+    case 'N':
+      return 'KE';
+    case 'S':
+      return 'GI';
+    case 'G':
+      return 'KI';
+    case 'B':
+      return 'KA';
+    case 'R':
+      return 'HI';
+    case 'K':
+      return 'OU';
+    default:
+      return null;
+  }
+}
+
+function deriveGameStatus(position: CanonicalPosition): GameStatusSnapshot {
+  const board = position.sfen?.split(' ')[0] ?? '';
+  const hasPlayerKing = board.includes('K');
+  const hasEnemyKing = board.includes('k');
+
+  if (!hasEnemyKing) {
+    return {
+      status: 'finished',
+      result: 'player_win',
+      winnerSide: 'player',
+    };
+  }
+  if (!hasPlayerKing) {
+    return {
+      status: 'finished',
+      result: 'enemy_win',
+      winnerSide: 'enemy',
+    };
+  }
+  return {
+    status: 'in_progress',
+    result: null,
+    winnerSide: null,
+  };
+}
+
+function formatMoveText(move: AiMove): string {
+  const src =
+    move.fromRow === null || move.fromCol === null ? 'drop' : `${move.fromRow},${move.fromCol}`;
+  return `${src}->${move.toRow},${move.toCol}:${move.pieceCode}`;
+}

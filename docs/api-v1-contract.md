@@ -15,14 +15,28 @@
   - `500 CREATE_GAME_FAILED | CREATE_POSITION_FAILED | INTERNAL_ERROR`
 
 ### `POST /api/v1/ai/move`
-- Success `200`: `data = <AiTurnResult>`
+- Success `200`:
+  - `data = { selectedMove, meta, position, game }`
+  - `position` は selected move 適用後に保存された canonical next position
 - Errors:
   - `400 INVALID_JSON`
   - `400 INVALID_REQUEST`
   - `404 GAME_NOT_FOUND`
+  - `409 MOVE_NO_MISMATCH | TURN_MISMATCH | STALE_POSITION`
   - `4xx AI_ENGINE_BAD_REQUEST`
   - `502 AI_ENGINE_UPSTREAM | AI_ENGINE_UNREACHABLE`
   - `500 ENGINE_INTERNAL`
+
+### `POST /api/v1/games/:gameId/moves`
+- Success `200`:
+  - `data = { moveNo, actorSide, move, position, game }`
+  - `position` は player/AI 共通 apply service で生成された canonical next position
+- Errors:
+  - `400 INVALID_JSON`
+  - `400 INVALID_REQUEST | INVALID_POSITION`
+  - `404 GAME_NOT_FOUND`
+  - `409 MOVE_NO_MISMATCH | TURN_MISMATCH | STALE_POSITION`
+  - `500 INTERNAL_ERROR`
 
 ### `GET /api/v1/stages`
 - Success `200`: `data = { stages: StageSummary[], note: string }`
