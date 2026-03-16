@@ -39,6 +39,30 @@
       "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerFixedSkill"
     },
     {
+      "pieceChar": "安",
+      "skillText": "移動時相手の「金」「銀」「銅」1体を「歩」に変える。",
+      "sourceFile": "../../SHOGI_GAME/piece_info.html",
+      "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerAnSkill"
+    },
+    {
+      "pieceChar": "宋",
+      "skillText": "移動時20％の確率で「金」駒を召喚する。",
+      "sourceFile": "../../SHOGI_GAME/piece_info.html",
+      "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerSongSkill"
+    },
+    {
+      "pieceChar": "逸",
+      "skillText": "移動時30％の確率で敵駒をひとつ相手の手持ち駒に送る。",
+      "sourceFile": "../../SHOGI_GAME/piece_info.html",
+      "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerEscapeSkill"
+    },
+    {
+      "pieceChar": "進",
+      "skillText": "1ターンごとに移動範囲が変わる。",
+      "sourceFile": "../../SHOGI_GAME/piece_info.html",
+      "sourceFunction": "../../SHOGI_GAME/online_battle.html::updateAdvanceMoveType"
+    },
+    {
       "pieceChar": "辺",
       "skillText": "ランダムに1辺選び、3ターンその辺に隣接している全ての駒を行動不能にする。。",
       "sourceFile": "../../SHOGI_GAME/piece_info.html",
@@ -4340,6 +4364,80 @@
       "notes": "次ターン制約の永続 state は後回しにし、root move 評価では hook trace/bonus を先行実装する"
     },
     {
+      "skillId": 101,
+      "pieceChars": ["安"],
+      "source": {
+        "skillText": "移動時相手の「金」「銀」「銅」1体を「歩」に変える。",
+        "sourceKind": "online_battle",
+        "sourceFile": "../../SHOGI_GAME/online_battle.html",
+        "sourceFunction": "triggerAnSkill"
+      },
+      "classification": {
+        "implementationKind": "script_hook",
+        "tags": ["move_trigger", "transform_piece", "enemy_transform", "board_wide_target"]
+      },
+      "trigger": {
+        "group": "event_move",
+        "type": "after_move"
+      },
+      "conditions": [],
+      "effects": [],
+      "scriptHook": "discount_enemy_elite_to_pawn",
+      "notes": "原作の盤上ランダム対象は未導入のため、stage battle executor では盤面先頭の金/銀を歩へ落とす決定論 hook で近似する"
+    },
+    {
+      "skillId": 102,
+      "pieceChars": ["宋"],
+      "source": {
+        "skillText": "移動時20％の確率で「金」駒を召喚する。",
+        "sourceKind": "online_battle",
+        "sourceFile": "../../SHOGI_GAME/online_battle.html",
+        "sourceFunction": "triggerSongSkill"
+      },
+      "classification": {
+        "implementationKind": "primitive",
+        "tags": ["move_trigger", "summon_piece", "probabilistic"]
+      },
+      "trigger": {
+        "group": "event_move",
+        "type": "after_move"
+      },
+      "conditions": [
+        {
+          "order": 1,
+          "group": "probability",
+          "type": "chance_roll",
+          "params": {
+            "procChance": 0.2
+          }
+        },
+        {
+          "order": 2,
+          "group": "board_state",
+          "type": "adjacent_empty_exists",
+          "params": {}
+        }
+      ],
+      "effects": [
+        {
+          "order": 1,
+          "group": "piece_generation",
+          "type": "summon_piece",
+          "target": {
+            "group": "adjacent",
+            "selector": "adjacent_empty"
+          },
+          "params": {
+            "summonPieceCode": "KI",
+            "summonPieceChar": "金",
+            "placementRule": "first_adjacent_empty"
+          }
+        }
+      ],
+      "scriptHook": null,
+      "notes": "原作のランダム近傍 1 マス選択は後回しにし、stage battle executor では最初の隣接空きマスへ金を置く primitive で近似する"
+    },
+    {
       "skillId": 103,
       "pieceChars": ["辺"],
       "source": {
@@ -4360,6 +4458,72 @@
       "effects": [],
       "scriptHook": "edge_line_imprison",
       "notes": "ランダム辺選択と3ターン拘束 state は後回しにし、hook 成立時の trace/bonus を先行実装する"
+    },
+    {
+      "skillId": 104,
+      "pieceChars": ["逸"],
+      "source": {
+        "skillText": "移動時30％の確率で敵駒をひとつ相手の手持ち駒に送る。",
+        "sourceKind": "online_battle",
+        "sourceFile": "../../SHOGI_GAME/online_battle.html",
+        "sourceFunction": "triggerEscapeSkill"
+      },
+      "classification": {
+        "implementationKind": "script_hook",
+        "tags": ["move_trigger", "send_to_hand", "probabilistic", "board_wide_target"]
+      },
+      "trigger": {
+        "group": "event_move",
+        "type": "after_move"
+      },
+      "conditions": [
+        {
+          "order": 1,
+          "group": "probability",
+          "type": "chance_roll",
+          "params": {
+            "procChance": 0.3
+          }
+        }
+      ],
+      "effects": [],
+      "scriptHook": "eject_enemy_piece_to_hand",
+      "notes": "原作の盤上ランダム対象は未導入のため、stage battle executor では盤面先頭の敵 1 体を相手手駒へ送る決定論 hook で近似する"
+    },
+    {
+      "skillId": 105,
+      "pieceChars": ["進"],
+      "source": {
+        "skillText": "1ターンごとに移動範囲が変わる。",
+        "sourceKind": "online_battle",
+        "sourceFile": "../../SHOGI_GAME/online_battle.html",
+        "sourceFunction": "updateAdvanceMoveType"
+      },
+      "classification": {
+        "implementationKind": "primitive",
+        "tags": ["turn_start", "modify_movement", "cyclic_pattern_change"]
+      },
+      "trigger": {
+        "group": "event_turn",
+        "type": "turn_start"
+      },
+      "conditions": [],
+      "effects": [
+        {
+          "order": 1,
+          "group": "piece_position",
+          "type": "modify_movement",
+          "target": {
+            "group": "self",
+            "selector": "self_piece"
+          },
+          "params": {
+            "movementRule": "cyclic_pattern_change"
+          }
+        }
+      ],
+      "scriptHook": null,
+      "notes": "原作の毎ターン移動タイプ更新を、stage battle では cyclic_pattern_change の turn_start rule として扱う"
     },
     {
       "skillId": 106,
