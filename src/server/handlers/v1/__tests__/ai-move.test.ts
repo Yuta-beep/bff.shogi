@@ -23,8 +23,26 @@ describe('POST /api/v1/ai/move', () => {
       parseAiMoveRequest: (body) => body as any,
       executeAiTurn: async () =>
         ({
-          moveNo: 1,
-          move: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
+          selectedMove: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
+          meta: {
+            engineVersion: 'test',
+            thinkMs: 10,
+            searchedNodes: 20,
+            searchDepth: 2,
+            evalCp: 30,
+            candidateCount: 2,
+            configApplied: {},
+          },
+          position: {
+            sideToMove: 'player',
+            turnNumber: 2,
+            moveCount: 1,
+            sfen: 'x',
+            stateHash: null,
+            boardState: {},
+            hands: {},
+          },
+          game: { status: 'in_progress', result: null, winnerSide: null },
         }) as any,
     });
     const response = await handler(
@@ -36,8 +54,30 @@ describe('POST /api/v1/ai/move', () => {
     expect(payload).toEqual({
       ok: true,
       data: {
-        moveNo: 1,
-        move: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
+        selectedMove: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
+        meta: {
+          engineVersion: 'test',
+          thinkMs: 10,
+          searchedNodes: 20,
+          searchDepth: 2,
+          evalCp: 30,
+          candidateCount: 2,
+          configApplied: {},
+        },
+        position: {
+          sideToMove: 'player',
+          turnNumber: 2,
+          moveCount: 1,
+          sfen: 'x',
+          stateHash: null,
+          boardState: {},
+          hands: {},
+        },
+        game: {
+          status: 'in_progress',
+          result: null,
+          winnerSide: null,
+        },
       },
     });
   });

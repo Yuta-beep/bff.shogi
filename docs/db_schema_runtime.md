@@ -113,6 +113,20 @@ RLS:
 - `positions_turn_number_chk`
 - `positions_move_count_chk`
 
+`board_state` の論理スキーマ:
+- runtime layer
+  - `skills_enabled`
+  - `skill_registry_v2`
+  - `skill_definitions_v2`
+  - `skill_effects`
+- current state layer
+  - `skill_state`
+    - `piece_statuses`
+    - `board_hazards`
+    - `movement_modifiers`
+    - `piece_defenses`
+    - `turn_start_rules`
+
 ### `game.moves`
 指し手履歴。
 

@@ -2,6 +2,7 @@ import { parseAiMoveRequest, AiMoveRequestValidationError } from '@/lib/ai-move-
 import { AiEngineConnectionError, AiEngineHttpError } from '@/lib/ai-engine-errors';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { executeAiTurn } from '@/services/ai-turn';
+import { CommitGameMoveError } from '@/services/game-move';
 
 type PostAiMoveDeps = {
   parseAiMoveRequest: typeof parseAiMoveRequest;
@@ -30,8 +31,16 @@ export function createPostAiMove(deps: PostAiMoveDeps = { parseAiMoveRequest, ex
         return jsonError('INVALID_REQUEST', error.message, 400);
       }
 
-      if (error?.message?.startsWith?.('GAME_NOT_FOUND:')) {
-        return jsonError('GAME_NOT_FOUND', error.message, 404);
+      if (error instanceof CommitGameMoveError) {
+        const status =
+          error.code === 'GAME_NOT_FOUND'
+            ? 404
+            : error.code === 'TURN_MISMATCH' ||
+                error.code === 'MOVE_NO_MISMATCH' ||
+                error.code === 'STALE_POSITION'
+              ? 409
+              : 400;
+        return jsonError(error.code, error.message, status);
       }
 
       if (error instanceof AiEngineHttpError) {

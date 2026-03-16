@@ -10,7 +10,7 @@ export type AiMove = {
   notation: string | null;
 };
 
-export type AiPosition = {
+export type CanonicalPosition = {
   sideToMove: 'player' | 'enemy';
   turnNumber: number;
   moveCount: number;
@@ -18,6 +18,9 @@ export type AiPosition = {
   stateHash?: string | null;
   boardState: Record<string, unknown>;
   hands: Record<string, unknown>;
+};
+
+export type AiPosition = CanonicalPosition & {
   legalMoves: AiMove[];
 };
 
@@ -58,4 +61,42 @@ export type AiMoveResponse = {
     candidateCount: number;
     configApplied: Record<string, unknown>;
   };
+};
+
+export type ApplyMoveRequest = {
+  position: AiPosition;
+  selectedMove: AiMove;
+};
+
+export type ApplyMoveResponse = {
+  position: CanonicalPosition;
+};
+
+export type LegalMovesRequest = {
+  position: AiPosition;
+};
+
+export type LegalMovesResponse = {
+  legalMoves: AiMove[];
+};
+
+export type GameStatusSnapshot = {
+  status: 'in_progress' | 'finished' | 'aborted';
+  result: 'player_win' | 'enemy_win' | 'draw' | 'abort' | null;
+  winnerSide: 'player' | 'enemy' | null;
+};
+
+export type CommittedMoveResponse = {
+  moveNo: number;
+  actorSide: 'player' | 'enemy';
+  move: AiMove;
+  position: CanonicalPosition;
+  game: GameStatusSnapshot;
+};
+
+export type AiTurnResult = {
+  selectedMove: AiMove;
+  meta: AiMoveResponse['meta'];
+  position: CanonicalPosition;
+  game: GameStatusSnapshot;
 };
