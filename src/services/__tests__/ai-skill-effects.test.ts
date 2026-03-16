@@ -207,8 +207,7 @@ describe('ai skill effects helpers', () => {
     expect(Boolean(enriched.position.boardState.skill_registry_v2)).toBe(true);
     expect(Boolean(enriched.position.boardState.skill_definitions_v2)).toBe(true);
 
-    const definitions =
-      (enriched.position.boardState.skill_definitions_v2 as any)?.definitions ?? [];
+    const definitions = (enriched.position.boardState.skill_definitions_v2 as any)?.definitions ?? [];
     expect(definitions.map((definition: any) => definition.skillId)).toEqual([28, 73]);
     expect(
       definitions.map((definition: any) => [
@@ -408,8 +407,7 @@ describe('ai skill effects helpers', () => {
         definition.trigger.group,
         definition.trigger.type,
         definition.effects[0]?.type,
-        definition.effects[0]?.params?.summonPiece ??
-          definition.effects[0]?.params?.summonPieceChar,
+        definition.effects[0]?.params?.summonPiece ?? definition.effects[0]?.params?.summonPieceChar,
       ]),
     ).toEqual([
       [7, 'continuous', 'continuous_aura', 'summon_piece', '木'],
@@ -694,14 +692,7 @@ describe('ai skill effects helpers', () => {
       ]),
     ).toEqual([
       [29, 'continuous', 'continuous_aura', 'copy_ability', 'front_enemy', 'movement_only'],
-      [
-        42,
-        'continuous',
-        'continuous_aura',
-        'copy_ability',
-        'adjacent_ally',
-        'adjacent_ally_random',
-      ],
+      [42, 'continuous', 'continuous_aura', 'copy_ability', 'adjacent_ally', 'adjacent_ally_random'],
       [55, 'event_turn', 'turn_start', 'copy_ability', 'self_piece', 'last_enemy_moved_piece'],
       [88, 'event_capture', 'after_capture', 'inherit_ability', 'self_piece', 'captured_piece'],
     ]);
@@ -914,38 +905,10 @@ describe('ai skill effects helpers', () => {
         definition.effects[0]?.params?.captureMode ?? definition.effects[0]?.params?.mode,
       ]),
     ).toEqual([
-      [
-        1,
-        'event_capture',
-        'after_capture',
-        'capture_with_leap',
-        'self_piece',
-        'leap_over_one_piece',
-      ],
-      [
-        25,
-        'continuous',
-        'continuous_rule',
-        'capture_constraint',
-        'self_piece',
-        'cannot_capture_enemy',
-      ],
-      [
-        37,
-        'continuous',
-        'continuous_rule',
-        'capture_constraint',
-        'self_piece',
-        'not_added_to_enemy_hand',
-      ],
-      [
-        52,
-        'event_capture',
-        'after_capture',
-        'multi_capture',
-        'adjacent_enemy',
-        'adjacent_after_capture',
-      ],
+      [1, 'event_capture', 'after_capture', 'capture_with_leap', 'self_piece', 'leap_over_one_piece'],
+      [25, 'continuous', 'continuous_rule', 'capture_constraint', 'self_piece', 'cannot_capture_enemy'],
+      [37, 'continuous', 'continuous_rule', 'capture_constraint', 'self_piece', 'not_added_to_enemy_hand'],
+      [52, 'event_capture', 'after_capture', 'multi_capture', 'adjacent_enemy', 'adjacent_after_capture'],
       [54, 'continuous', 'continuous_rule', 'multi_capture', 'front_enemy', 'forward_chain'],
     ]);
   });
@@ -1209,9 +1172,7 @@ describe('ai skill effects helpers', () => {
 
     const definitions = (enriched.position.boardState.skill_definitions_v2 as any)?.definitions;
     expect(Array.isArray(definitions)).toBe(true);
-    expect(definitions.map((definition: any) => definition.skillId)).toEqual([
-      9, 97, 99, 100, 103, 106,
-    ]);
+    expect(definitions.map((definition: any) => definition.skillId)).toEqual([9, 97, 99, 100, 103, 106]);
     expect(
       definitions.map((definition: any) => [
         definition.skillId,
@@ -1227,6 +1188,93 @@ describe('ai skill effects helpers', () => {
       [100, 'event_move', 'after_move', 'fixed_next_turn_restriction', null],
       [103, 'event_move', 'after_move', 'edge_line_imprison', null],
       [106, 'event_move', 'after_move', 'escape_king_follow', null],
+    ]);
+  });
+
+  it('attaches the resolved remaining skills with implemented and script_hook states from the catalog', async () => {
+    resetSkillRegistryV2CacheForTests();
+
+    const enriched = await attachSkillEffectsToAiRequestWithClient(
+      {
+        gameId: 'resolved-remaining-skills',
+        moveNo: 1,
+        position: {
+          sideToMove: 'player',
+          turnNumber: 1,
+          moveCount: 0,
+          sfen: '4k4/9/9/9/4R4/9/9/9/4K4 b - 1',
+          stateHash: null,
+          boardState: {},
+          hands: {},
+          legalMoves: [
+            {
+              fromRow: 4,
+              fromCol: 4,
+              toRow: 4,
+              toCol: 5,
+              pieceCode: '安',
+              promote: false,
+              dropPieceCode: null,
+              capturedPieceCode: null,
+              notation: 'an-hook',
+            },
+            {
+              fromRow: 4,
+              fromCol: 4,
+              toRow: 4,
+              toCol: 5,
+              pieceCode: '宋',
+              promote: false,
+              dropPieceCode: null,
+              capturedPieceCode: null,
+              notation: 'song-primitive',
+            },
+            {
+              fromRow: 4,
+              fromCol: 4,
+              toRow: 4,
+              toCol: 5,
+              pieceCode: '逸',
+              promote: false,
+              dropPieceCode: null,
+              capturedPieceCode: null,
+              notation: 'itsu-hook',
+            },
+            {
+              fromRow: 4,
+              fromCol: 4,
+              toRow: 4,
+              toCol: 5,
+              pieceCode: '進',
+              promote: false,
+              dropPieceCode: null,
+              capturedPieceCode: null,
+              notation: 'advance-primitive',
+            },
+          ],
+        },
+        engineConfig: {},
+      } as any,
+      createCatalogBackedSupabaseAdmin() as any,
+      false,
+    );
+
+    expect(enriched.position.boardState.skills_enabled).toBe(true);
+    const definitions = (enriched.position.boardState.skill_definitions_v2 as any)?.definitions ?? [];
+    expect(definitions.map((definition: any) => definition.skillId)).toEqual([101, 102, 104, 105]);
+    expect(
+      definitions.map((definition: any) => [
+        definition.skillId,
+        definition.classification.implementationKind,
+        definition.trigger.type,
+        definition.scriptHook,
+        definition.effects[0]?.type ?? null,
+      ]),
+    ).toEqual([
+      [101, 'script_hook', 'after_move', 'discount_enemy_elite_to_pawn', null],
+      [102, 'primitive', 'after_move', null, 'summon_piece'],
+      [104, 'script_hook', 'after_move', 'eject_enemy_piece_to_hand', null],
+      [105, 'primitive', 'turn_start', null, 'modify_movement'],
     ]);
   });
 });
@@ -1303,46 +1351,11 @@ function batchAApplyStatusFixtures() {
       },
     ],
     m_skill_condition: [
-      {
-        skill_id: 11,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_enemy_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 18,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_enemy_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 19,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_enemy_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 31,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_enemy_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 63,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_enemy_exists',
-        params_json: {},
-        is_active: true,
-      },
+      { skill_id: 11, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_enemy_exists', params_json: {}, is_active: true },
+      { skill_id: 18, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_enemy_exists', params_json: {}, is_active: true },
+      { skill_id: 19, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_enemy_exists', params_json: {}, is_active: true },
+      { skill_id: 31, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_enemy_exists', params_json: {}, is_active: true },
+      { skill_id: 63, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_enemy_exists', params_json: {}, is_active: true },
     ],
     m_skill_effect: [
       {
@@ -1604,54 +1617,12 @@ function batchBSummonPieceFixtures() {
       },
     ],
     m_skill_condition: [
-      {
-        skill_id: 7,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_empty_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 23,
-        condition_order: 1,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_empty_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 32,
-        condition_order: 1,
-        condition_group: 'probability',
-        condition_type: 'chance_roll',
-        params_json: { procChance: 0.2 },
-        is_active: true,
-      },
-      {
-        skill_id: 32,
-        condition_order: 2,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_empty_exists',
-        params_json: {},
-        is_active: true,
-      },
-      {
-        skill_id: 36,
-        condition_order: 1,
-        condition_group: 'probability',
-        condition_type: 'chance_roll',
-        params_json: { procChance: 0.2 },
-        is_active: true,
-      },
-      {
-        skill_id: 36,
-        condition_order: 2,
-        condition_group: 'board_state',
-        condition_type: 'adjacent_empty_exists',
-        params_json: {},
-        is_active: true,
-      },
+      { skill_id: 7, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_empty_exists', params_json: {}, is_active: true },
+      { skill_id: 23, condition_order: 1, condition_group: 'board_state', condition_type: 'adjacent_empty_exists', params_json: {}, is_active: true },
+      { skill_id: 32, condition_order: 1, condition_group: 'probability', condition_type: 'chance_roll', params_json: { procChance: 0.2 }, is_active: true },
+      { skill_id: 32, condition_order: 2, condition_group: 'board_state', condition_type: 'adjacent_empty_exists', params_json: {}, is_active: true },
+      { skill_id: 36, condition_order: 1, condition_group: 'probability', condition_type: 'chance_roll', params_json: { procChance: 0.2 }, is_active: true },
+      { skill_id: 36, condition_order: 2, condition_group: 'board_state', condition_type: 'adjacent_empty_exists', params_json: {}, is_active: true },
     ],
     m_skill_effect: [
       {
@@ -1671,11 +1642,7 @@ function batchBSummonPieceFixtures() {
         effect_type: 'summon_piece',
         target_group: 'adjacent',
         target_selector: 'adjacent_empty',
-        params_json: {
-          summonPiece: 'self_clone',
-          placementRule: 'first_adjacent_empty',
-          maxCount: 1,
-        },
+        params_json: { summonPiece: 'self_clone', placementRule: 'first_adjacent_empty', maxCount: 1 },
         is_active: true,
       },
       {
@@ -2984,8 +2951,7 @@ function batchFDefenseFixtures() {
       },
       {
         skill_id: 85,
-        skill_desc:
-          '周囲の味方駒のスキル発動確率を30％増加させる。味方の「陰」駒が同じ行や列にいるとき敵駒に取られない。',
+        skill_desc: '周囲の味方駒のスキル発動確率を30％増加させる。味方の「陰」駒が同じ行や列にいるとき敵駒に取られない。',
         implementation_kind: 'composite',
         trigger_group: 'continuous',
         trigger_type: 'continuous_rule',
@@ -2997,8 +2963,7 @@ function batchFDefenseFixtures() {
       },
       {
         skill_id: 86,
-        skill_desc:
-          '周囲の敵駒を呪い状態にしてスキル発動を阻害する。味方の「陽」が同じ行や列にいるとき敵駒に取られない。',
+        skill_desc: '周囲の敵駒を呪い状態にしてスキル発動を阻害する。味方の「陽」が同じ行や列にいるとき敵駒に取られない。',
         implementation_kind: 'composite',
         trigger_group: 'continuous',
         trigger_type: 'continuous_aura',
