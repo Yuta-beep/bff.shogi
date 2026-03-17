@@ -18,6 +18,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout shogi-ai
+        uses: actions/checkout@v4
+        with:
+          repository: syougi-project/shogi-ai
+          path: ../shogi-ai
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
