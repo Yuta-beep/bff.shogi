@@ -53,6 +53,7 @@ export async function executeAiTurn(input: ExecuteAiTurnInput): Promise<AiTurnRe
 
   return {
     selectedMove: response.selectedMove,
+    skillTriggered: committed.skillTriggered,
     meta: response.meta,
     position: committed.position,
     game: committed.game,

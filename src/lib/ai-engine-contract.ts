@@ -90,12 +90,14 @@ export type CommittedMoveResponse = {
   moveNo: number;
   actorSide: 'player' | 'enemy';
   move: AiMove;
+  skillTriggered: boolean;
   position: CanonicalPosition;
   game: GameStatusSnapshot;
 };
 
 export type AiTurnResult = {
   selectedMove: AiMove;
+  skillTriggered: boolean;
   meta: AiMoveResponse['meta'];
   position: CanonicalPosition;
   game: GameStatusSnapshot;

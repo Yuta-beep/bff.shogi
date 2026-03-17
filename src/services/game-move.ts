@@ -172,6 +172,7 @@ export function createCommitGameMove(
       moveNo: expectedMoveNo,
       actorSide: input.actorSide,
       move: normalizedMove,
+      skillTriggered: isSkillTriggeredMove(normalizedMove),
       position: nextPosition,
       game: nextGame,
     };
@@ -429,4 +430,11 @@ function formatMoveText(move: AiMove): string {
   const src =
     move.fromRow === null || move.fromCol === null ? 'drop' : `${move.fromRow},${move.fromCol}`;
   return `${src}->${move.toRow},${move.toCol}:${move.pieceCode}`;
+}
+
+function isSkillTriggeredMove(move: AiMove): boolean {
+  const notation = move.notation;
+  if (!notation) return false;
+  if (/^[1-9][a-i][1-9][a-i]\+?$/i.test(notation)) return false;
+  return true;
 }
