@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Checkout shogi-ai
-        run: git clone --depth 1 https://github.com/syougi-project/shogi-ai.git "${{ github.workspace }}/../shogi-ai"
+        run: git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/syougi-project/shogi-ai.git "${{ github.workspace }}/../shogi-ai"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
