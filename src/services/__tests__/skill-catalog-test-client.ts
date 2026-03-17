@@ -90,7 +90,7 @@ export function buildCatalogSkillFixtures() {
     path.resolve(backendRoot, 'data/ability/skill_definition_v2_catalog.json'),
   );
   const registry = readJson<SkillRegistryDocument>(
-    path.resolve(backendRoot, '../shogi-ai/docs/skill-registry-v2-draft.json'),
+    path.resolve(backendRoot, 'data/skill-registry-v2-draft.json'),
   );
 
   return {
