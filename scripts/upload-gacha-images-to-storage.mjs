@@ -102,14 +102,17 @@ async function ensureBucketExists(supabase) {
       ? Number.parseInt(normalized, 10) * 1_000_000
       : Number.parseInt(normalized, 10);
 
-    if (Number.isFinite(expectedBytes) && currentLimit !== expectedBytes) {
+    if (
+      (found.public ?? false) !== true ||
+      (Number.isFinite(expectedBytes) && currentLimit !== expectedBytes)
+    ) {
       const { error: updateError } = await supabase.storage.updateBucket(bucket, {
-        public: false,
+        public: true,
         fileSizeLimit: normalized,
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
       });
       if (updateError) throw new Error(`updateBucket failed: ${updateError.message}`);
-      console.log(`[ok] Updated bucket "${bucket}" file size limit to ${normalized}`);
+      console.log(`[ok] Updated bucket "${bucket}" (public=true, file size limit=${normalized})`);
     }
     return;
   }
@@ -120,7 +123,7 @@ async function ensureBucketExists(supabase) {
   }
 
   const { error: createError } = await supabase.storage.createBucket(bucket, {
-    public: false,
+    public: true,
     fileSizeLimit: fileSizeLimit,
     allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
   });
@@ -134,7 +137,7 @@ async function uploadImage(supabase, storagePath, fullPath) {
   const { error } = await supabase.storage.from(bucket).upload(storagePath, binary, {
     upsert: true,
     contentType: 'image/png',
-    cacheControl: '3600',
+    cacheControl: '31536000',
   });
   if (error) throw new Error(`upload ${storagePath} failed: ${error.message}`);
 }

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 import { isPublishedNow } from '@/lib/time';
 
 export type StageRow = {
@@ -182,14 +183,8 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
     const cacheKey = `${bucket}::${key}`;
     if (storageUrlByAsset.has(cacheKey)) continue;
 
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .createSignedUrl(key, signedUrlTtlSec);
-    if (error) {
-      storageUrlByAsset.set(cacheKey, null);
-      continue;
-    }
-    storageUrlByAsset.set(cacheKey, data?.signedUrl ?? null);
+    const imageUrl = await getStorageAssetUrl(bucket, key, { signedUrlTtlSec });
+    storageUrlByAsset.set(cacheKey, imageUrl);
   }
 
   return {

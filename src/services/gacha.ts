@@ -1,5 +1,6 @@
 import { isPublishedNow } from '@/lib/time';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 
 type GachaRow = {
   gacha_id: number;
@@ -159,10 +160,7 @@ function rollRarity(rates: ActiveGacha['rates']): 'N' | 'R' | 'SR' | 'UR' | 'SSR
 }
 
 async function createSignedUrl(bucket: string | null, key: string | null): Promise<string | null> {
-  if (!bucket || !key) return null;
-  const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(key, 60 * 60);
-  if (error) return null;
-  return data?.signedUrl ?? null;
+  return getStorageAssetUrl(bucket, key, { signedUrlTtlSec: 60 * 60 });
 }
 
 async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {

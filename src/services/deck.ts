@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 
 export type OwnedPieceRow = {
   pieceId: number;
@@ -103,14 +104,8 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
     if (!meta.imageBucket || !meta.imageKey) continue;
     const assetKey = `${meta.imageBucket}::${meta.imageKey}`;
     if (storageUrlByAsset.has(assetKey)) continue;
-    const { data, error } = await supabaseAdmin.storage
-      .from(meta.imageBucket)
-      .createSignedUrl(meta.imageKey, signedUrlTtlSec);
-    if (error) {
-      storageUrlByAsset.set(assetKey, null);
-      continue;
-    }
-    storageUrlByAsset.set(assetKey, data?.signedUrl ?? null);
+    const imageUrl = await getStorageAssetUrl(meta.imageBucket, meta.imageKey, { signedUrlTtlSec });
+    storageUrlByAsset.set(assetKey, imageUrl);
   }
 
   const ownedPieces: OwnedPieceRow[] = ownedRows.map((row) => {
