@@ -5,6 +5,7 @@ import {
   commitGameMove,
   loadGameState,
   enrichPosition,
+  markGameFinished,
   CommitGameMoveError,
 } from '@/services/game-move';
 
@@ -37,6 +38,21 @@ export async function executeAiTurn(input: ExecuteAiTurnInput): Promise<AiTurnRe
     engineConfig: normalizedConfig,
   };
   const response = await requestAiMove(aiRequest);
+
+  if (response.isCheckmate) {
+    // 相手に合法手なし = 詰み = 現在の手番側が負け = 逆側が勝ち
+    const winnerSide = currentPosition.sideToMove === 'enemy' ? 'player' : 'enemy';
+    const result = winnerSide === 'player' ? 'player_win' : 'enemy_win';
+    await markGameFinished(input.gameId, result, winnerSide);
+    return {
+      selectedMove: null,
+      skillTriggered: false,
+      meta: null,
+      position: gameState.position,
+      game: { status: 'finished', result, winnerSide },
+    };
+  }
+
   const committed = await commitGameMove({
     gameId: input.gameId,
     moveNo,

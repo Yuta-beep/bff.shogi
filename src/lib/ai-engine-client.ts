@@ -35,7 +35,8 @@ export async function requestAiMove(
   }
 
   const json = (await response.json()) as {
-    selected_move: {
+    is_checkmate?: boolean;
+    selected_move?: {
       from_row: number | null;
       from_col: number | null;
       to_row: number;
@@ -46,7 +47,7 @@ export async function requestAiMove(
       captured_piece_code: string | null;
       notation: string | null;
     };
-    meta: {
+    meta?: {
       engine_version: string;
       think_ms: number;
       searched_nodes: number;
@@ -57,7 +58,16 @@ export async function requestAiMove(
     };
   };
 
+  if (json.is_checkmate) {
+    return { isCheckmate: true };
+  }
+
+  if (!json.selected_move || !json.meta) {
+    throw new AiEngineHttpError(500, 'missing selected_move or meta in ai engine response');
+  }
+
   return {
+    isCheckmate: false,
     selectedMove: {
       fromRow: json.selected_move.from_row,
       fromCol: json.selected_move.from_col,

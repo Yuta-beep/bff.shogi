@@ -50,18 +50,19 @@ export type AiMoveRequest = {
   engineConfig?: EngineConfig;
 };
 
-export type AiMoveResponse = {
-  selectedMove: AiMove;
-  meta: {
-    engineVersion: string;
-    thinkMs: number;
-    searchedNodes: number;
-    searchDepth: number;
-    evalCp: number;
-    candidateCount: number;
-    configApplied: Record<string, unknown>;
-  };
+export type AiMoveMeta = {
+  engineVersion: string;
+  thinkMs: number;
+  searchedNodes: number;
+  searchDepth: number;
+  evalCp: number;
+  candidateCount: number;
+  configApplied: Record<string, unknown>;
 };
+
+export type AiMoveResponse =
+  | { isCheckmate: true }
+  | { isCheckmate: false; selectedMove: AiMove; meta: AiMoveMeta };
 
 export type ApplyMoveRequest = {
   position: AiPosition;
@@ -89,16 +90,18 @@ export type GameStatusSnapshot = {
 export type CommittedMoveResponse = {
   moveNo: number;
   actorSide: 'player' | 'enemy';
+  clientMoveId?: string | null;
   move: AiMove;
   skillTriggered: boolean;
+  serverAppliedAt?: string;
   position: CanonicalPosition;
   game: GameStatusSnapshot;
 };
 
 export type AiTurnResult = {
-  selectedMove: AiMove;
+  selectedMove: AiMove | null;
   skillTriggered: boolean;
-  meta: AiMoveResponse['meta'];
+  meta: AiMoveMeta | null;
   position: CanonicalPosition;
   game: GameStatusSnapshot;
 };

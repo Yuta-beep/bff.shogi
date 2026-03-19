@@ -1,8 +1,8 @@
 import { applyAiMove } from '@/lib/ai-engine-client';
 import type {
   AiMove,
+  AiMoveMeta,
   AiMoveRequest,
-  AiMoveResponse,
   AiPosition,
   CanonicalPosition,
   CommittedMoveResponse,
@@ -40,6 +40,7 @@ type CommitGameMoveInput = {
   gameId: string;
   moveNo: number;
   actorSide: 'player' | 'enemy';
+  clientMoveId?: string | null;
   move: AiMove;
   stateHash?: string | null;
   thoughtMs?: number | null;
@@ -47,7 +48,7 @@ type CommitGameMoveInput = {
   aiInference?: {
     normalizedConfig: NormalizedEngineConfig;
     requestPayload: AiMoveRequest;
-    responsePayload: AiMoveResponse;
+    responsePayload: { isCheckmate: false; selectedMove: AiMove; meta: AiMoveMeta };
   };
 };
 
@@ -73,7 +74,7 @@ type CommitGameMoveDeps = {
     moveNo: number;
     normalizedConfig: NormalizedEngineConfig;
     requestPayload: AiMoveRequest;
-    responsePayload: AiMoveResponse;
+    responsePayload: { isCheckmate: false; selectedMove: AiMove; meta: AiMoveMeta };
   }) => Promise<void>;
 };
 
@@ -112,7 +113,12 @@ export function createCommitGameMove(
   },
 ) {
   return async function commitGameMove(input: CommitGameMoveInput): Promise<CommittedMoveResponse> {
+    const totalStart = Date.now();
+    const metrics: Record<string, number> = {};
+
+    const loadStart = Date.now();
     const gameState = await deps.loadGameState(input.gameId);
+    metrics.loadGameStateMs = Date.now() - loadStart;
     if (gameState.game.status !== 'in_progress') {
       throw new CommitGameMoveError('GAME_ALREADY_FINISHED', 'game is already finished');
     }
@@ -138,16 +144,23 @@ export function createCommitGameMove(
       throw new CommitGameMoveError('STALE_POSITION', 'stateHash does not match current position');
     }
 
+    const enrichStart = Date.now();
     const currentPosition =
       input.currentPosition ??
       (await deps.enrichPosition(input.gameId, gameState.position, expectedMoveNo));
+    metrics.enrichPositionMs = Date.now() - enrichStart;
+
     const normalizedMove = withCapturedPieceCode(currentPosition, input.move);
+
+    const applyStart = Date.now();
     const nextPosition = await deps.applyMove({
       position: currentPosition,
       selectedMove: normalizedMove,
     });
+    metrics.applyMoveMs = Date.now() - applyStart;
     const nextGame = deriveGameStatus(nextPosition);
 
+    const persistStart = Date.now();
     await deps.persistMove({
       gameId: input.gameId,
       moveNo: expectedMoveNo,
@@ -157,8 +170,10 @@ export function createCommitGameMove(
       position: nextPosition,
       game: nextGame,
     });
+    metrics.persistMoveMs = Date.now() - persistStart;
 
     if (input.aiInference) {
+      const inferenceLogStart = Date.now();
       await deps.insertInferenceLog({
         gameId: input.gameId,
         moveNo: expectedMoveNo,
@@ -166,13 +181,30 @@ export function createCommitGameMove(
         requestPayload: input.aiInference.requestPayload,
         responsePayload: input.aiInference.responsePayload,
       });
+      metrics.insertInferenceLogMs = Date.now() - inferenceLogStart;
     }
+
+    const serverAppliedAt = new Date().toISOString();
+    metrics.totalMs = Date.now() - totalStart;
+    console.info(
+      JSON.stringify({
+        event: 'commit_game_move_timing',
+        gameId: input.gameId,
+        moveNo: expectedMoveNo,
+        actorSide: input.actorSide,
+        clientMoveId: input.clientMoveId ?? null,
+        promote: Boolean(input.move.promote),
+        ...metrics,
+      }),
+    );
 
     return {
       moveNo: expectedMoveNo,
       actorSide: input.actorSide,
+      clientMoveId: input.clientMoveId ?? null,
       move: normalizedMove,
       skillTriggered: isSkillTriggeredMove(normalizedMove),
+      serverAppliedAt,
       position: nextPosition,
       game: nextGame,
     };
@@ -310,12 +342,31 @@ async function persistMove(input: {
   if (gameError) throw gameError;
 }
 
+export async function markGameFinished(
+  gameId: string,
+  result: GameStatusSnapshot['result'],
+  winnerSide: GameStatusSnapshot['winnerSide'],
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .schema('game')
+    .from('games')
+    .update({
+      updated_at: new Date().toISOString(),
+      status: 'finished',
+      result,
+      winner_side: winnerSide,
+      ended_at: new Date().toISOString(),
+    })
+    .eq('game_id', gameId);
+  if (error) throw error;
+}
+
 async function insertInferenceLog(input: {
   gameId: string;
   moveNo: number;
   normalizedConfig: NormalizedEngineConfig;
   requestPayload: AiMoveRequest;
-  responsePayload: AiMoveResponse;
+  responsePayload: { isCheckmate: false; selectedMove: AiMove; meta: AiMoveMeta };
 }) {
   const selectedMoveText =
     input.responsePayload.selectedMove.notation ??

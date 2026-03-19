@@ -157,6 +157,8 @@ describe('backend -> shogi-ai skill v2 e2e', () => {
             engineConfig: normalizeEngineConfig(enriched.engineConfig),
           });
 
+          expect(response.isCheckmate).toBe(false);
+          if (response.isCheckmate) throw new Error('unexpected checkmate');
           expect(response.selectedMove.pieceCode).toBe(testCase.expectedPieceCode);
           expect(response.selectedMove.notation).toBe(testCase.expectedNotation);
           expect(response.meta.candidateCount).toBeGreaterThanOrEqual(1);

@@ -82,6 +82,38 @@ describe('POST /api/v1/ai/move', () => {
     });
   });
 
+  it('returns 200 with finished game when executeAiTurn detects checkmate', async () => {
+    const handler = createPostAiMove({
+      parseAiMoveRequest: (body) => body as any,
+      executeAiTurn: async () =>
+        ({
+          selectedMove: null,
+          skillTriggered: false,
+          meta: null,
+          position: {
+            sideToMove: 'player',
+            turnNumber: 115,
+            moveCount: 114,
+            sfen: 'kG7/GG7/9/9/9/9/9/9/8K b - 115',
+            stateHash: null,
+            boardState: {},
+            hands: {},
+          },
+          game: { status: 'finished', result: 'player_win', winnerSide: 'player' },
+        }) as any,
+    });
+    const response = await handler(
+      jsonRequest('http://localhost/api/v1/ai/move', { gameId: 'g', moveNo: 115 }),
+    );
+    const payload = await readJson(response);
+
+    expect(response.status).toBe(200);
+    expect(payload.data.game.status).toBe('finished');
+    expect(payload.data.game.result).toBe('player_win');
+    expect(payload.data.game.winnerSide).toBe('player');
+    expect(payload.data.selectedMove).toBe(null);
+  });
+
   it('maps validation and upstream errors deterministically', async () => {
     const validation = createPostAiMove({
       parseAiMoveRequest: () => {
