@@ -21,7 +21,7 @@ export async function listPieceCatalog() {
     };
 
   const piecesSelectLegacy =
-    'piece_id,kanji,name,piece_code,move_pattern_id,skill_id,is_active,published_at,unpublished_at,' +
+    'piece_id,kanji,name,piece_code,move_pattern_id,skill_id,image_bucket,image_key,is_active,published_at,unpublished_at,' +
     'm_skill:skill_id(skill_name,skill_desc),' +
     'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,can_jump,constraints_json,m_move_pattern_vector(dx,dy,max_step))';
   const piecesSelectWithDescription = `move_description_ja,${piecesSelectLegacy}`;
@@ -40,6 +40,27 @@ export async function listPieceCatalog() {
     .select('piece_id,m_stage:stage_id(stage_no)');
 
   if (stagePieceRes.error) throw stagePieceRes.error;
+
+  const storageUrlByAsset = new Map<string, string | null>();
+  const signedUrlTtlSec = 60 * 60;
+
+  for (const row of piecesRes.data ?? []) {
+    const bucket = (row as any).image_bucket as string | null | undefined;
+    const key = (row as any).image_key as string | null | undefined;
+    if (!bucket || !key) continue;
+
+    const cacheKey = `${bucket}::${key}`;
+    if (storageUrlByAsset.has(cacheKey)) continue;
+
+    const { data, error } = await supabaseAdmin.storage
+      .from(bucket)
+      .createSignedUrl(key, signedUrlTtlSec);
+    if (error) {
+      storageUrlByAsset.set(cacheKey, null);
+      continue;
+    }
+    storageUrlByAsset.set(cacheKey, data?.signedUrl ?? null);
+  }
 
   const movePatternIds = [
     ...new Set(
@@ -102,6 +123,10 @@ export async function listPieceCatalog() {
         moveCode: pattern?.move_code ?? null,
         char: row.kanji,
         name: row.name,
+        imageSignedUrl:
+          row.image_bucket && row.image_key
+            ? (storageUrlByAsset.get(`${row.image_bucket}::${row.image_key}`) ?? null)
+            : null,
         unlock: unlockStageByPieceId.has(row.piece_id)
           ? `Stage ${unlockStageByPieceId.get(row.piece_id)}`
           : '初期',

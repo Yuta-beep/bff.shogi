@@ -183,29 +183,37 @@ $$;
 update master.m_skill
 set
   skill_type = 'active_or_passive'
-where skill_type in ('passive', 'active_or_triggered') or skill_type is null or btrim(skill_type) = '';
+where skill_type::text in ('passive', 'active_or_triggered')
+   or skill_type is null
+   or btrim(skill_type::text) = '';
 
 update master.m_skill
 set
   target_rule = 'unspecified'
-where target_rule is null or btrim(target_rule) = '';
+where target_rule is null or btrim(target_rule::text) = '';
 
 update master.m_skill
 set
   effect_summary_type = 'scripted'
-where effect_summary_type is null or btrim(effect_summary_type) = '';
+where effect_summary_type is null or btrim(effect_summary_type::text) = '';
 
 update master.m_skill
 set
   parse_status = 'rule_only_v2'
-where parse_status in ('raw_text', 'manual', 'manual_admin', 'rule_only_v1', 'hybrid_rule_and_script_v1')
+where parse_status::text in (
+  'raw_text',
+  'manual',
+  'manual_admin',
+  'rule_only_v1',
+  'hybrid_rule_and_script_v1'
+)
    or parse_status is null
-   or btrim(parse_status) = '';
+   or btrim(parse_status::text) = '';
 
 update master.m_skill_effect
 set
   target_rule = 'unspecified'
-where target_rule is null or btrim(target_rule) = '';
+where target_rule is null or btrim(target_rule::text) = '';
 
 alter table master.m_skill
   alter column skill_type drop default,

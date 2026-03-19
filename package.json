@@ -14,6 +14,8 @@
     "skills:v2:catalog:apply": "node scripts/apply-skill-definition-v2-catalog.mjs --apply",
     "seed:piece-images": "node scripts/seed-master-piece-image-keys.mjs",
     "seed:piece-images:storage": "node scripts/upload-piece-images-to-storage.mjs",
+    "seed:promoted-piece-images:storage": "node scripts/upload-promoted-piece-images-to-storage.mjs",
+    "seed:promoted-piece-images:storage:apply": "node scripts/upload-promoted-piece-images-to-storage.mjs --apply",
     "reset:users": "node scripts/reset-auth-users.mjs",
     "reset:users:apply": "node scripts/reset-auth-users.mjs --apply",
     "format": "biome format app src lib scripts docs .github package.json tsconfig.json next.config.ts README.md --write",
