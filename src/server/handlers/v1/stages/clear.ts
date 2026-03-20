@@ -1,5 +1,9 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { grantStageClearRewards, StageClearRewardError } from '@/services/stage-clear-reward';
+import {
+  grantStageClearRewards,
+  InsufficientStaminaError,
+  StageClearRewardError,
+} from '@/services/stage-clear-reward';
 import { resolveUserId } from '@/server/handlers/v1/deck';
 
 type StageClearDeps = {
@@ -29,6 +33,13 @@ export function createPostStageClear(
       const result = await deps.grantStageClearRewards(userId, stageNo);
       return jsonOk(result);
     } catch (error: any) {
+      if (error instanceof InsufficientStaminaError) {
+        return jsonError(
+          'INSUFFICIENT_STAMINA',
+          `Stamina insufficient: ${error.current} / ${error.required} required`,
+          422,
+        );
+      }
       if (error instanceof StageClearRewardError) {
         if (error.code === 'NOT_FOUND') {
           return jsonError('NOT_FOUND', error.message, 404);

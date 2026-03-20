@@ -43,6 +43,8 @@ export function createGetMeSnapshot(
         goldCurrency: snapshot.goldCurrency,
         playerRank: snapshot.playerRank,
         playerExp: snapshot.playerExp,
+        stamina: snapshot.stamina,
+        maxStamina: snapshot.maxStamina,
       });
     } catch (error: any) {
       return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load player snapshot', 500);

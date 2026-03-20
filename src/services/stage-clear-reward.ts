@@ -1,6 +1,9 @@
 import { isPublishedNow } from '@/lib/time';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getStageByNo } from '@/services/stage-master';
+import { deductPlayerStamina, InsufficientStaminaError } from '@/services/stamina';
+
+export { InsufficientStaminaError };
 
 type RewardTiming = 'first_clear' | 'clear';
 
@@ -279,6 +282,11 @@ export async function grantStageClearRewards(
   }
   if (!isPublishedNow(stage)) {
     throw new StageClearRewardError('LOCKED', 'Stage is locked');
+  }
+
+  const staminaCost = Number(stage.stamina_cost ?? 0);
+  if (staminaCost > 0) {
+    await deductPlayerStamina(userId, staminaCost);
   }
 
   const clearState = await markStageClear(userId, stage.stage_id);

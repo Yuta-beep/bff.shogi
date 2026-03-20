@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { createPostStageClear } from '../stages/clear';
+import { InsufficientStaminaError } from '@/services/stage-clear-reward';
 import { readJson } from './test-utils';
 
 describe('POST /api/v1/stages/:stageNo/clear', () => {
@@ -28,6 +29,21 @@ describe('POST /api/v1/stages/:stageNo/clear', () => {
 
     expect(response.status).toBe(400);
     expect(payload.error.code).toBe('INVALID_STAGE_NO');
+  });
+
+  it('returns 422 when stamina is insufficient', async () => {
+    const handler = createPostStageClear({
+      resolveUserId: async () => 'user-1',
+      grantStageClearRewards: async () => {
+        throw new InsufficientStaminaError(2, 5);
+      },
+    });
+
+    const response = await handler('1', new Request('http://localhost/api/v1/stages/1/clear'));
+    const payload = await readJson(response);
+
+    expect(response.status).toBe(422);
+    expect(payload.error.code).toBe('INSUFFICIENT_STAMINA');
   });
 
   it('returns 200 with reward payload on success', async () => {
