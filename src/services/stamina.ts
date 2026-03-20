@@ -1,12 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// 50 stamina per hour, recovered 5 at a time → 1 tick every 6 minutes
+// 5 stamina recovered every 10 minutes
 const STAMINA_PER_TICK = 5;
-const MS_PER_TICK = 6 * 60 * 1000;
+const MS_PER_TICK = 10 * 60 * 1000;
 
 export type PlayerStamina = {
   stamina: number;
   maxStamina: number;
+  nextRecoveryAt: string | null;
 };
 
 export class InsufficientStaminaError extends Error {
@@ -24,17 +25,22 @@ export class InsufficientStaminaError extends Error {
 /**
  * Compute how much stamina the player actually has, accounting for ticks
  * that have elapsed since `updatedAt`.
- * Returns the clamped current stamina and how many complete ticks passed.
+ * Returns the clamped current stamina, how many complete ticks passed,
+ * and the ISO timestamp of the next recovery tick (null when at max).
  */
 export function calculateCurrentStamina(
   stored: number,
   max: number,
   updatedAt: Date,
-): { stamina: number; ticksPassed: number } {
+): { stamina: number; ticksPassed: number; nextRecoveryAt: string | null } {
   const elapsed = Date.now() - updatedAt.getTime();
   const ticksPassed = Math.floor(elapsed / MS_PER_TICK);
   const stamina = Math.min(max, stored + ticksPassed * STAMINA_PER_TICK);
-  return { stamina, ticksPassed };
+  const nextRecoveryAt =
+    stamina < max
+      ? new Date(updatedAt.getTime() + (ticksPassed + 1) * MS_PER_TICK).toISOString()
+      : null;
+  return { stamina, ticksPassed, nextRecoveryAt };
 }
 
 export async function getPlayerStamina(userId: string): Promise<PlayerStamina> {
@@ -48,13 +54,13 @@ export async function getPlayerStamina(userId: string): Promise<PlayerStamina> {
   if (error) throw error;
   if (!data) throw new Error('Player not found');
 
-  const { stamina } = calculateCurrentStamina(
+  const { stamina, nextRecoveryAt } = calculateCurrentStamina(
     Number(data.stamina),
     Number(data.max_stamina),
     new Date(data.stamina_updated_at as string),
   );
 
-  return { stamina, maxStamina: Number(data.max_stamina) };
+  return { stamina, maxStamina: Number(data.max_stamina), nextRecoveryAt };
 }
 
 /**
@@ -98,5 +104,8 @@ export async function deductPlayerStamina(userId: string, cost: number): Promise
 
   if (updateError) throw updateError;
 
-  return { stamina: newStamina, maxStamina };
+  const nextRecoveryAt =
+    newStamina < maxStamina ? new Date(newUpdatedAt.getTime() + MS_PER_TICK).toISOString() : null;
+
+  return { stamina: newStamina, maxStamina, nextRecoveryAt };
 }

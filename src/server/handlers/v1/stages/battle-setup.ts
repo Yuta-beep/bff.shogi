@@ -2,11 +2,13 @@ import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { isPublishedNow } from '@/lib/time';
 import { getStageBattleSetup, getStageByNo } from '@/services/stage-master';
+import { deductPlayerStamina, InsufficientStaminaError } from '@/services/stamina';
 
 type BattleSetupDeps = {
   getStageByNo: typeof getStageByNo;
   isPublishedNow: typeof isPublishedNow;
   getStageBattleSetup: typeof getStageBattleSetup;
+  deductPlayerStamina: typeof deductPlayerStamina;
 };
 
 export function optionsBattleSetup() {
@@ -14,7 +16,12 @@ export function optionsBattleSetup() {
 }
 
 export function createGetBattleSetup(
-  deps: BattleSetupDeps = { getStageByNo, isPublishedNow, getStageBattleSetup },
+  deps: BattleSetupDeps = {
+    getStageByNo,
+    isPublishedNow,
+    getStageBattleSetup,
+    deductPlayerStamina,
+  },
 ) {
   return async function getBattleSetup(stageNoRaw: string, req?: Request) {
     const stageNo = Number(stageNoRaw);
@@ -42,6 +49,14 @@ export function createGetBattleSetup(
         }
       }
 
+      const staminaCost = Number(stage.stamina_cost ?? 0);
+      if (staminaCost > 0) {
+        if (!userId) {
+          return jsonError('UNAUTHORIZED', 'Authentication required to enter this stage', 401);
+        }
+        await deps.deductPlayerStamina(userId, staminaCost);
+      }
+
       const setup = await deps.getStageBattleSetup(stage.stage_id, userId);
 
       return jsonOk({
@@ -60,6 +75,13 @@ export function createGetBattleSetup(
         ...setup,
       });
     } catch (error: any) {
+      if (error instanceof InsufficientStaminaError) {
+        return jsonError(
+          'INSUFFICIENT_STAMINA',
+          `Stamina insufficient: ${error.current} / ${error.required} required`,
+          422,
+        );
+      }
       return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load battle setup', 500);
     }
   };

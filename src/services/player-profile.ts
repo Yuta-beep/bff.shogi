@@ -10,6 +10,7 @@ export type PlayerSnapshot = {
   playerExp: number;
   stamina: number;
   maxStamina: number;
+  nextRecoveryAt: string | null;
 };
 
 export async function getPlayerSnapshot(userId: string): Promise<PlayerSnapshot | null> {
@@ -26,7 +27,7 @@ export async function getPlayerSnapshot(userId: string): Promise<PlayerSnapshot 
   if (!data) return null;
 
   const maxStamina = Number(data.max_stamina ?? 50);
-  const { stamina } = calculateCurrentStamina(
+  const { stamina, nextRecoveryAt } = calculateCurrentStamina(
     Number(data.stamina ?? 50),
     maxStamina,
     new Date((data.stamina_updated_at as string) ?? new Date().toISOString()),
@@ -41,6 +42,7 @@ export async function getPlayerSnapshot(userId: string): Promise<PlayerSnapshot 
     playerExp: Number(data.player_exp ?? 0),
     stamina,
     maxStamina,
+    nextRecoveryAt,
   };
 }
 

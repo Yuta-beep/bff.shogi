@@ -3,6 +3,8 @@ import { describe, expect, it } from 'bun:test';
 import { createGetBattleSetup } from '../stages/battle-setup';
 import { readJson } from './test-utils';
 
+const noopDeduct = async () => ({ stamina: 50, maxStamina: 50, nextRecoveryAt: null });
+
 describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
   it('returns 404 for missing stage', async () => {
     const handler = createGetBattleSetup({
@@ -13,6 +15,7 @@ describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
         enemyRoster: [],
         rewards: [],
       }),
+      deductPlayerStamina: noopDeduct,
     });
     const response = await handler('1');
     const payload = await readJson(response);
@@ -44,6 +47,7 @@ describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
         enemyRoster: [],
         rewards: [],
       }),
+      deductPlayerStamina: noopDeduct,
     });
 
     const response = await handler('1');

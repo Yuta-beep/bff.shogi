@@ -45,6 +45,7 @@ export function createGetMeSnapshot(
         playerExp: snapshot.playerExp,
         stamina: snapshot.stamina,
         maxStamina: snapshot.maxStamina,
+        nextRecoveryAt: snapshot.nextRecoveryAt,
       });
     } catch (error: any) {
       return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load player snapshot', 500);

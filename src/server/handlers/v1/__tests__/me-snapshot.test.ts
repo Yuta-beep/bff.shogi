@@ -31,6 +31,7 @@ describe('GET /api/v1/me/snapshot', () => {
         playerExp: 0,
         stamina: 45,
         maxStamina: 50,
+        nextRecoveryAt: '2026-03-20T12:10:00.000Z',
       }),
     });
     const response = await handler(new Request('http://localhost/api/v1/me/snapshot'));
@@ -48,6 +49,7 @@ describe('GET /api/v1/me/snapshot', () => {
         playerExp: 0,
         stamina: 45,
         maxStamina: 50,
+        nextRecoveryAt: '2026-03-20T12:10:00.000Z',
       },
     });
   });
