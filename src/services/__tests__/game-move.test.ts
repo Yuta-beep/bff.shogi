@@ -1,12 +1,43 @@
 import { describe, expect, it } from 'bun:test';
 
 import { createCommitGameMove, CommitGameMoveError } from '@/services/game-move';
+import { PieceMappingService } from '@/services/piece-mapping';
+
+function buildMappingService(): PieceMappingService {
+  return PieceMappingService.fromStatic([
+    {
+      pieceId: 1,
+      sfenCode: 'P',
+      displayChar: 'FU',
+      canonicalCode: 'pawn',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 8,
+      sfenCode: 'K',
+      displayChar: 'OU',
+      canonicalCode: 'king',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 9,
+      sfenCode: '+P',
+      displayChar: 'TO',
+      canonicalCode: 'prom_pawn',
+      isSpecial: false,
+      isPromoted: true,
+    },
+  ]);
+}
 
 describe('commitGameMove', () => {
   it('commits a move using canonical next position from the apply service', async () => {
     const persistCalls: unknown[] = [];
     const insertInferenceCalls: unknown[] = [];
     const commitGameMove = createCommitGameMove({
+      mappingService: buildMappingService(),
       loadGameState: async () => ({
         gameId: 'game-1',
         position: {
@@ -70,6 +101,7 @@ describe('commitGameMove', () => {
 
   it('rejects moveNo mismatches before applying', async () => {
     const commitGameMove = createCommitGameMove({
+      mappingService: buildMappingService(),
       loadGameState: async () => ({
         gameId: 'game-1',
         position: {

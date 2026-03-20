@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { PieceMappingService } from '@/services/piece-mapping';
 
 type SkillCatalogDocument = {
   definitions: CatalogDefinition[];
@@ -84,6 +85,22 @@ export function createCatalogBackedSupabaseAdmin() {
   };
 }
 
+export function createCatalogBackedPieceMappingService() {
+  const fixtures = cachedFixtures ?? buildCatalogSkillFixtures();
+  cachedFixtures = fixtures;
+
+  return PieceMappingService.fromStatic(
+    fixtures.m_piece.map((row) => ({
+      pieceId: row.piece_id as number,
+      sfenCode: standardSfenCodeFor(String(row.piece_code)),
+      displayChar: String(row.piece_code),
+      canonicalCode: String(row.piece_code),
+      isSpecial: standardSfenCodeFor(String(row.piece_code)) == null,
+      isPromoted: isPromotedCode(String(row.piece_code)),
+    })),
+  );
+}
+
 export function buildCatalogSkillFixtures() {
   const backendRoot = process.cwd();
   const catalog = readJson<SkillCatalogDocument>(
@@ -95,7 +112,8 @@ export function buildCatalogSkillFixtures() {
 
   return {
     m_piece: catalog.definitions.flatMap((definition) =>
-      definition.pieceChars.map((pieceChar) => ({
+      definition.pieceChars.map((pieceChar, index) => ({
+        piece_id: definition.skillId * 100 + index + 1,
         piece_code: pieceChar,
         skill_id: definition.skillId,
         is_active: true,
@@ -170,6 +188,45 @@ export function buildCatalogSkillFixtures() {
       ),
     ),
   } as const;
+}
+
+function standardSfenCodeFor(pieceCode: string): string | null {
+  switch (pieceCode.toUpperCase()) {
+    case 'FU':
+      return 'P';
+    case 'TO':
+      return '+P';
+    case 'KY':
+      return 'L';
+    case 'NY':
+      return '+L';
+    case 'KE':
+      return 'N';
+    case 'NK':
+      return '+N';
+    case 'GI':
+      return 'S';
+    case 'NG':
+      return '+S';
+    case 'KI':
+      return 'G';
+    case 'KA':
+      return 'B';
+    case 'UM':
+      return '+B';
+    case 'HI':
+      return 'R';
+    case 'RY':
+      return '+R';
+    case 'OU':
+      return 'K';
+    default:
+      return null;
+  }
+}
+
+function isPromotedCode(pieceCode: string): boolean {
+  return ['TO', 'NY', 'NK', 'NG', 'UM', 'RY'].includes(pieceCode.toUpperCase());
 }
 
 function readJson<T>(filePath: string): T {

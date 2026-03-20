@@ -11,6 +11,7 @@ import type {
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { NormalizedEngineConfig } from '@/lib/engine-config';
 import { attachSkillEffectsToAiRequest } from '@/services/ai-skill-effects';
+import { PieceMappingService } from '@/services/piece-mapping';
 
 type PersistedPositionRow = {
   game_id: string;
@@ -58,6 +59,7 @@ type CommitGameMoveDeps = {
     gameId: string,
     position: CanonicalPosition,
     moveNo: number,
+    mappingService: PieceMappingService,
   ) => Promise<AiPosition>;
   applyMove: (input: { position: AiPosition; selectedMove: AiMove }) => Promise<CanonicalPosition>;
   persistMove: (input: {
@@ -76,6 +78,7 @@ type CommitGameMoveDeps = {
     requestPayload: AiMoveRequest;
     responsePayload: { isCheckmate: false; selectedMove: AiMove; meta: AiMoveMeta };
   }) => Promise<void>;
+  mappingService?: PieceMappingService;
 };
 
 export class CommitGameMoveError extends Error {
@@ -144,13 +147,13 @@ export function createCommitGameMove(
       throw new CommitGameMoveError('STALE_POSITION', 'stateHash does not match current position');
     }
 
+    const mappingService = deps.mappingService ?? (await PieceMappingService.fromDb());
     const enrichStart = Date.now();
     const currentPosition =
       input.currentPosition ??
-      (await deps.enrichPosition(input.gameId, gameState.position, expectedMoveNo));
+      (await deps.enrichPosition(input.gameId, gameState.position, expectedMoveNo, mappingService));
     metrics.enrichPositionMs = Date.now() - enrichStart;
-
-    const normalizedMove = withCapturedPieceCode(currentPosition, input.move);
+    const normalizedMove = withCapturedPieceCode(currentPosition, input.move, mappingService);
 
     const applyStart = Date.now();
     const nextPosition = await deps.applyMove({
@@ -158,7 +161,7 @@ export function createCommitGameMove(
       selectedMove: normalizedMove,
     });
     metrics.applyMoveMs = Date.now() - applyStart;
-    const nextGame = deriveGameStatus(nextPosition);
+    const nextGame = deriveGameStatus(nextPosition, mappingService);
 
     const persistStart = Date.now();
     await deps.persistMove({
@@ -257,15 +260,19 @@ export async function enrichPosition(
   gameId: string,
   position: CanonicalPosition,
   moveNo: number,
+  mappingService: PieceMappingService,
 ): Promise<AiPosition> {
-  const enriched = await attachSkillEffectsToAiRequest({
-    gameId,
-    moveNo,
-    position: {
-      ...position,
-      legalMoves: [],
+  const enriched = await attachSkillEffectsToAiRequest(
+    {
+      gameId,
+      moveNo,
+      position: {
+        ...position,
+        legalMoves: [],
+      },
     },
-  });
+    mappingService,
+  );
   return enriched.position;
 }
 
@@ -388,73 +395,41 @@ async function insertInferenceLog(input: {
   if (error) throw error;
 }
 
-function withCapturedPieceCode(position: CanonicalPosition, move: AiMove): AiMove {
+function withCapturedPieceCode(
+  position: CanonicalPosition,
+  move: AiMove,
+  mappingService: PieceMappingService,
+): AiMove {
   if (move.capturedPieceCode || move.dropPieceCode) {
     return move;
   }
-  const capturedPieceCode = pieceCodeAt(position.sfen ?? null, move.toRow, move.toCol);
+  const capturedPieceCode = pieceCodeAt(
+    position.sfen ?? null,
+    move.toRow,
+    move.toCol,
+    mappingService,
+  );
   return {
     ...move,
     capturedPieceCode,
   };
 }
 
-function pieceCodeAt(sfen: string | null, row: number, col: number): string | null {
-  if (!sfen || row < 0 || row > 8 || col < 0 || col > 8) return null;
-  const board = sfen.split(' ')[0] ?? '';
-  const ranks = board.split('/');
-  if (ranks.length !== 9) return null;
-  const rank = ranks[row] ?? '';
-  let file = 0;
-  let promoted = false;
-
-  for (const ch of rank) {
-    if (ch === '+') {
-      promoted = true;
-      continue;
-    }
-    if (/\d/.test(ch)) {
-      file += Number(ch);
-      continue;
-    }
-    if (file === col) {
-      const code = sfenCharToPieceCode(ch);
-      return code;
-    }
-    file += 1;
-    promoted = false;
-  }
-
-  return null;
+function pieceCodeAt(
+  sfen: string | null,
+  row: number,
+  col: number,
+  mappingService: PieceMappingService,
+): string | null {
+  return mappingService.displayCharAtSquare(sfen, row, col);
 }
 
-function sfenCharToPieceCode(ch: string): string | null {
-  switch (ch.toUpperCase()) {
-    case 'P':
-      return 'FU';
-    case 'L':
-      return 'KY';
-    case 'N':
-      return 'KE';
-    case 'S':
-      return 'GI';
-    case 'G':
-      return 'KI';
-    case 'B':
-      return 'KA';
-    case 'R':
-      return 'HI';
-    case 'K':
-      return 'OU';
-    default:
-      return null;
-  }
-}
-
-function deriveGameStatus(position: CanonicalPosition): GameStatusSnapshot {
-  const board = position.sfen?.split(' ')[0] ?? '';
-  const hasPlayerKing = board.includes('K');
-  const hasEnemyKing = board.includes('k');
+function deriveGameStatus(
+  position: CanonicalPosition,
+  mappingService: PieceMappingService,
+): GameStatusSnapshot {
+  const hasPlayerKing = mappingService.hasRawSfenToken(position.sfen ?? null, 'K');
+  const hasEnemyKing = mappingService.hasRawSfenToken(position.sfen ?? null, 'k');
 
   if (!hasEnemyKing) {
     return {

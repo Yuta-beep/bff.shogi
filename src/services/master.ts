@@ -187,7 +187,7 @@ export async function listPieceCatalog() {
   const piecesSelectLegacy =
     'piece_id,kanji,name,piece_code,move_pattern_id,skill_id,image_bucket,image_key,is_active,published_at,unpublished_at,' +
     'm_skill:skill_id(skill_name,skill_desc),' +
-    'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,can_jump,constraints_json,m_move_pattern_vector(dx,dy,max_step))';
+    'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,can_jump,constraints_json,m_move_pattern_vector(dx,dy,max_step,capture_mode))';
   const piecesSelectWithDescription = `move_description_ja,${piecesSelectLegacy}`;
 
   let piecesRes = await fetchPieces(piecesSelectWithDescription);
@@ -278,9 +278,14 @@ export async function listPieceCatalog() {
     .map((row: any) => {
       const pattern = row.m_move_pattern;
       const rules: MoveRule[] = rulesByPatternId.get(row.move_pattern_id) ?? [];
-      const vectors: { dx: number; dy: number; maxStep: number }[] = (
+      const vectors: { dx: number; dy: number; maxStep: number; captureMode: string | null }[] = (
         pattern?.m_move_pattern_vector ?? []
-      ).map((v: any) => ({ dx: v.dx, dy: v.dy, maxStep: v.max_step }));
+      ).map((v: any) => ({
+        dx: v.dx,
+        dy: v.dy,
+        maxStep: v.max_step,
+        captureMode: v.capture_mode ?? null,
+      }));
       return {
         pieceId: row.piece_id,
         pieceCode: row.piece_code,

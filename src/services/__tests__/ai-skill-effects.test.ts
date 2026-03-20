@@ -7,12 +7,109 @@ import {
   extractPieceCodesFromSfen,
   resetSkillRegistryV2CacheForTests,
 } from '@/services/ai-skill-effects';
-import { createCatalogBackedSupabaseAdmin } from './skill-catalog-test-client';
+import { PieceMappingService } from '@/services/piece-mapping';
+import {
+  createCatalogBackedPieceMappingService,
+  createCatalogBackedSupabaseAdmin,
+} from './skill-catalog-test-client';
+
+function buildStandardMappingService(): PieceMappingService {
+  return PieceMappingService.fromStatic([
+    {
+      pieceId: 1,
+      sfenCode: 'P',
+      displayChar: 'FU',
+      canonicalCode: 'FU',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 2,
+      sfenCode: 'L',
+      displayChar: 'KY',
+      canonicalCode: 'KY',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 3,
+      sfenCode: 'N',
+      displayChar: 'KE',
+      canonicalCode: 'KE',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 4,
+      sfenCode: 'S',
+      displayChar: 'GI',
+      canonicalCode: 'GI',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 5,
+      sfenCode: 'G',
+      displayChar: 'KI',
+      canonicalCode: 'KI',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 6,
+      sfenCode: 'B',
+      displayChar: 'KA',
+      canonicalCode: 'KA',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 7,
+      sfenCode: 'R',
+      displayChar: 'HI',
+      canonicalCode: 'HI',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 8,
+      sfenCode: 'K',
+      displayChar: 'OU',
+      canonicalCode: 'OU',
+      isSpecial: false,
+      isPromoted: false,
+    },
+    {
+      pieceId: 9,
+      sfenCode: '+P',
+      displayChar: 'TO',
+      canonicalCode: 'TO',
+      isSpecial: false,
+      isPromoted: true,
+    },
+  ]);
+}
+
+const standardMappingService = buildStandardMappingService();
+const catalogBackedMappingService = createCatalogBackedPieceMappingService();
+
+function createFixtureBackedMappingService(fixtures: Record<string, Record<string, unknown>[]>) {
+  const pieceRows = (fixtures.m_piece ?? []).map((row, index) => ({
+    pieceId: Number(row.piece_id ?? index + 1),
+    sfenCode: null,
+    displayChar: String(row.piece_code ?? ''),
+    canonicalCode: String(row.piece_code ?? ''),
+    isSpecial: true,
+    isPromoted: false,
+  }));
+  return PieceMappingService.fromStatic(pieceRows);
+}
 
 describe('ai skill effects helpers', () => {
   it('extracts piece codes from SFEN board', () => {
     const codes = extractPieceCodesFromSfen(
       'lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1',
+      standardMappingService,
     );
     expect(codes.has('FU')).toBe(true);
     expect(codes.has('HI')).toBe(true);
@@ -21,42 +118,45 @@ describe('ai skill effects helpers', () => {
   });
 
   it('collects piece codes from SFEN, hands, and legal moves', () => {
-    const codes = collectPieceCodesForSkillLookup({
-      sideToMove: 'enemy',
-      turnNumber: 1,
-      moveCount: 0,
-      sfen: '9/9/9/9/9/9/9/9/4K4 b - 1',
-      stateHash: null,
-      boardState: {},
-      hands: {
-        player: { hi: 1 },
-        enemy: { ke: 2 },
+    const codes = collectPieceCodesForSkillLookup(
+      {
+        sideToMove: 'enemy',
+        turnNumber: 1,
+        moveCount: 0,
+        sfen: '9/9/9/9/9/9/9/9/4K4 b - 1',
+        stateHash: null,
+        boardState: {},
+        hands: {
+          player: { hi: 1 },
+          enemy: { ke: 2 },
+        },
+        legalMoves: [
+          {
+            fromRow: 6,
+            fromCol: 4,
+            toRow: 5,
+            toCol: 4,
+            pieceCode: 'FU',
+            promote: false,
+            dropPieceCode: null,
+            capturedPieceCode: null,
+            notation: null,
+          },
+          {
+            fromRow: null,
+            fromCol: null,
+            toRow: 4,
+            toCol: 4,
+            pieceCode: 'FU',
+            promote: false,
+            dropPieceCode: 'GI',
+            capturedPieceCode: null,
+            notation: null,
+          },
+        ],
       },
-      legalMoves: [
-        {
-          fromRow: 6,
-          fromCol: 4,
-          toRow: 5,
-          toCol: 4,
-          pieceCode: 'FU',
-          promote: false,
-          dropPieceCode: null,
-          capturedPieceCode: null,
-          notation: null,
-        },
-        {
-          fromRow: null,
-          fromCol: null,
-          toRow: 4,
-          toCol: 4,
-          pieceCode: 'FU',
-          promote: false,
-          dropPieceCode: 'GI',
-          capturedPieceCode: null,
-          notation: null,
-        },
-      ],
-    });
+      standardMappingService,
+    );
     expect(codes.has('FU')).toBe(true);
     expect(codes.has('GI')).toBe(true);
     expect(codes.has('HI')).toBe(true);
@@ -201,6 +301,7 @@ describe('ai skill effects helpers', () => {
       } as any,
       createCatalogBackedSupabaseAdmin() as any,
       false,
+      catalogBackedMappingService,
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -301,6 +402,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchAApplyStatusFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchAApplyStatusFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -394,6 +496,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchBSummonPieceFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchBSummonPieceFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -487,6 +590,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchCTransformPieceFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchCTransformPieceFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -580,6 +684,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchDBoardHazardAndReturnFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchDBoardHazardAndReturnFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -673,6 +778,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchECopyAndInheritFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchECopyAndInheritFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -786,6 +892,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchFDefenseFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchFDefenseFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -896,6 +1003,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchGCaptureRuleFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchGCaptureRuleFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -1007,6 +1115,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchHExtraActionFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchHExtraActionFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -1088,6 +1197,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchILinkedActionFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchILinkedActionFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -1202,6 +1312,7 @@ describe('ai skill effects helpers', () => {
       input as any,
       createFakeSkillClient(batchJScriptHookFixtures()) as any,
       false,
+      createFixtureBackedMappingService(batchJScriptHookFixtures()),
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -1296,6 +1407,7 @@ describe('ai skill effects helpers', () => {
       } as any,
       createCatalogBackedSupabaseAdmin() as any,
       false,
+      catalogBackedMappingService,
     );
 
     expect(enriched.position.boardState.skills_enabled).toBe(true);
@@ -4219,11 +4331,19 @@ function batchJScriptHookFixtures() {
 }
 
 function createFakeSkillClient(fixtures: Record<string, Record<string, unknown>[]>) {
+  const normalizedFixtures: Record<string, Record<string, unknown>[]> = {
+    ...fixtures,
+    m_piece: (fixtures.m_piece ?? []).map((row, index) => ({
+      piece_id: row.piece_id ?? index + 1,
+      ...row,
+    })),
+  };
+
   return {
     schema() {
       return {
         from(table: string) {
-          return createFakeQuery(fixtures[table] ?? []);
+          return createFakeQuery(normalizedFixtures[table] ?? []);
         },
       };
     },

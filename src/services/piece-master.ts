@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 import { isPublishedNow } from '@/lib/time';
 
 type MoveRule = {
@@ -23,7 +24,7 @@ export async function listPieceCatalog() {
   const piecesSelectLegacy =
     'piece_id,kanji,name,piece_code,move_pattern_id,skill_id,image_bucket,image_key,is_active,published_at,unpublished_at,' +
     'm_skill:skill_id(skill_name,skill_desc),' +
-    'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,can_jump,constraints_json,m_move_pattern_vector(dx,dy,max_step))';
+    'm_move_pattern:move_pattern_id(move_code,move_name,is_repeatable,can_jump,constraints_json,m_move_pattern_vector(dx,dy,max_step,capture_mode))';
   const piecesSelectWithDescription = `move_description_ja,${piecesSelectLegacy}`;
 
   let piecesRes = await fetchPieces(piecesSelectWithDescription);
@@ -43,24 +44,25 @@ export async function listPieceCatalog() {
 
   const storageUrlByAsset = new Map<string, string | null>();
   const signedUrlTtlSec = 60 * 60;
+  const uniqueAssets = [
+    ...new Set(
+      (piecesRes.data ?? [])
+        .map((row: any) => {
+          const bucket = row.image_bucket as string | null | undefined;
+          const key = row.image_key as string | null | undefined;
+          return bucket && key ? `${bucket}::${key}` : null;
+        })
+        .filter((asset): asset is string => Boolean(asset)),
+    ),
+  ];
 
-  for (const row of piecesRes.data ?? []) {
-    const bucket = (row as any).image_bucket as string | null | undefined;
-    const key = (row as any).image_key as string | null | undefined;
-    if (!bucket || !key) continue;
-
-    const cacheKey = `${bucket}::${key}`;
-    if (storageUrlByAsset.has(cacheKey)) continue;
-
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .createSignedUrl(key, signedUrlTtlSec);
-    if (error) {
-      storageUrlByAsset.set(cacheKey, null);
-      continue;
-    }
-    storageUrlByAsset.set(cacheKey, data?.signedUrl ?? null);
-  }
+  await Promise.all(
+    uniqueAssets.map(async (asset) => {
+      const [bucket, key] = asset.split('::');
+      const imageUrl = await getStorageAssetUrl(bucket ?? null, key ?? null, { signedUrlTtlSec });
+      storageUrlByAsset.set(asset, imageUrl);
+    }),
+  );
 
   const movePatternIds = [
     ...new Set(
@@ -109,17 +111,53 @@ export async function listPieceCatalog() {
     }
   }
 
+  const mappingRes = await supabaseAdmin
+    .schema('master')
+    .from('m_piece_mapping')
+    .select('piece_id,sfen_code,canonical_piece_code,is_promoted')
+    .eq('is_active', true);
+
+  if (mappingRes.error) throw mappingRes.error;
+
+  const mappingByPieceId = new Map<
+    number,
+    {
+      sfenCode: string | null;
+      canonicalCode: string;
+      isPromoted: boolean;
+    }
+  >();
+
+  for (const row of mappingRes.data ?? []) {
+    const pieceId = Number((row as any).piece_id);
+    if (!Number.isFinite(pieceId)) continue;
+    mappingByPieceId.set(pieceId, {
+      sfenCode: ((row as any).sfen_code as string | null) ?? null,
+      canonicalCode: String((row as any).canonical_piece_code ?? ''),
+      isPromoted: Boolean((row as any).is_promoted),
+    });
+  }
+
   return (piecesRes.data ?? [])
     .filter((row: any) => isPublishedNow(row))
     .map((row: any) => {
       const pattern = row.m_move_pattern;
+      const mapping = mappingByPieceId.get(row.piece_id);
       const rules: MoveRule[] = rulesByPatternId.get(row.move_pattern_id) ?? [];
-      const vectors: { dx: number; dy: number; maxStep: number }[] = (
+      const vectors: { dx: number; dy: number; maxStep: number; captureMode: string | null }[] = (
         pattern?.m_move_pattern_vector ?? []
-      ).map((v: any) => ({ dx: v.dx, dy: v.dy, maxStep: v.max_step }));
+      ).map((v: any) => ({
+        dx: v.dx,
+        dy: v.dy,
+        maxStep: v.max_step,
+        captureMode: v.capture_mode ?? null,
+      }));
       return {
         pieceId: row.piece_id,
         pieceCode: row.piece_code,
+        sfenCode: mapping?.sfenCode ?? null,
+        canonicalCode: mapping?.canonicalCode ?? null,
+        isPromoted: mapping?.isPromoted ?? false,
         moveCode: pattern?.move_code ?? null,
         char: row.kanji,
         name: row.name,

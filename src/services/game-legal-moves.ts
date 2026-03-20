@@ -6,6 +6,7 @@ import type {
   LegalMovesResponse,
 } from '@/lib/ai-engine-contract';
 import { enrichPosition, loadGameState } from '@/services/game-move';
+import { PieceMappingService } from '@/services/piece-mapping';
 
 type LoadGameLegalMovesInput = {
   gameId: string;
@@ -24,8 +25,10 @@ type LoadGameLegalMovesDeps = {
     gameId: string,
     position: CanonicalPosition,
     moveNo: number,
+    mappingService: PieceMappingService,
   ) => Promise<AiPosition>;
   requestLegalMoves: (input: { position: AiPosition }) => Promise<LegalMovesResponse>;
+  mappingService?: PieceMappingService;
 };
 
 export class LoadGameLegalMovesError extends Error {
@@ -50,7 +53,13 @@ export function createLoadGameLegalMoves(
   ): Promise<LoadGameLegalMovesResult> {
     const gameState = await deps.loadGameState(input.gameId);
     const moveNo = gameState.position.moveCount + 1;
-    const currentPosition = await deps.enrichPosition(input.gameId, gameState.position, moveNo);
+    const mappingService = deps.mappingService ?? (await PieceMappingService.fromDb());
+    const currentPosition = await deps.enrichPosition(
+      input.gameId,
+      gameState.position,
+      moveNo,
+      mappingService,
+    );
     const response = await deps.requestLegalMoves({ position: currentPosition });
 
     return {

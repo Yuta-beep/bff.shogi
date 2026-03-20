@@ -1,8 +1,9 @@
 import type { AiMoveRequest } from '@/lib/ai-engine-contract';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { PieceMappingService } from '@/services/piece-mapping';
 
 type PieceSkillRow = {
-  piece_code: string;
+  piece_id: number;
   skill_id: number | null;
 };
 
@@ -181,17 +182,41 @@ type SkillQueryClient = {
 
 let skillRegistryV2Promise: Promise<SkillRegistryDocument> | null = null;
 
-export async function attachSkillEffectsToAiRequest(input: AiMoveRequest): Promise<AiMoveRequest> {
-  return attachSkillEffectsToAiRequestWithClient(input, supabaseAdmin, true);
+export async function attachSkillEffectsToAiRequest(
+  input: AiMoveRequest,
+  mappingService?: PieceMappingService,
+): Promise<AiMoveRequest> {
+  const resolvedMappingService = mappingService ?? (await PieceMappingService.fromDb());
+  return attachSkillEffectsToAiRequestWithClient(
+    input,
+    supabaseAdmin,
+    true,
+    resolvedMappingService,
+  );
 }
 
 export async function attachSkillEffectsToAiRequestWithClient(
   input: AiMoveRequest,
   client: SkillQueryClient,
   useRegistryCache = false,
+  mappingService: PieceMappingService,
 ): Promise<AiMoveRequest> {
-  const pieceCodes = collectPieceCodesForSkillLookup(input.position);
+  const pieceCodes = collectPieceCodesForSkillLookup(input.position, mappingService);
   if (pieceCodes.size === 0) {
+    return withSkillPayload(input, {
+      registry: null,
+      definitions: null,
+      legacyEffects: [],
+    });
+  }
+
+  const displayCharToPieceId = mappingService.resolveDisplayCharsToPieceIds(pieceCodes);
+  const pieceIds = Array.from(displayCharToPieceId.values());
+  const pieceIdToDisplayChar = new Map(
+    [...displayCharToPieceId.entries()].map(([displayChar, id]) => [id, displayChar]),
+  );
+
+  if (pieceIds.length === 0) {
     return withSkillPayload(input, {
       registry: null,
       definitions: null,
@@ -202,17 +227,18 @@ export async function attachSkillEffectsToAiRequestWithClient(
   const { data: pieceRows, error: pieceError } = await client
     .schema('master')
     .from('m_piece')
-    .select('piece_code,skill_id')
+    .select('piece_id,skill_id')
     .eq('is_active', true)
-    .in('piece_code', Array.from(pieceCodes));
+    .in('piece_id', pieceIds);
   if (pieceError) throw pieceError;
 
-  const rows = (pieceRows ?? []) as PieceSkillRow[];
   const skillToPieceCodes = new Map<number, string[]>();
-  for (const row of rows) {
+  for (const row of (pieceRows ?? []) as PieceSkillRow[]) {
     if (!row.skill_id) continue;
+    const displayChar = pieceIdToDisplayChar.get(row.piece_id);
+    if (!displayChar) continue;
     const list = skillToPieceCodes.get(row.skill_id) ?? [];
-    if (!list.includes(row.piece_code)) list.push(row.piece_code);
+    if (!list.includes(displayChar)) list.push(displayChar);
     skillToPieceCodes.set(row.skill_id, list);
   }
 
@@ -569,10 +595,14 @@ function isSkillEffectReadyRow(effect: SkillEffectV2Row): effect is SkillEffectR
   return Boolean(effect.effect_group && effect.target_group && effect.target_selector);
 }
 
-export function collectPieceCodesForSkillLookup(position: AiMoveRequest['position']): Set<string> {
+export function collectPieceCodesForSkillLookup(
+  position: AiMoveRequest['position'],
+  mappingService: PieceMappingService,
+): Set<string> {
   const set = new Set<string>();
 
-  for (const code of extractPieceCodesFromSfen(position.sfen ?? null)) set.add(code);
+  for (const code of extractPieceCodesFromSfen(position.sfen ?? null, mappingService))
+    set.add(code);
   for (const code of extractPieceCodesFromHands(position.hands)) set.add(code);
   for (const mv of position.legalMoves) {
     if (mv.pieceCode) set.add(mv.pieceCode.toUpperCase());
@@ -596,38 +626,9 @@ function extractPieceCodesFromHands(hands: unknown): Set<string> {
   return out;
 }
 
-export function extractPieceCodesFromSfen(sfen: string | null): Set<string> {
-  const out = new Set<string>();
-  if (!sfen) return out;
-  const board = sfen.split(' ')[0] ?? '';
-  for (const ch of board) {
-    if (ch === '/' || (ch >= '1' && ch <= '9')) continue;
-    if (ch === '+') continue;
-    const code = sfenCharToPieceCode(ch);
-    if (code) out.add(code);
-  }
-  return out;
-}
-
-function sfenCharToPieceCode(ch: string): string | null {
-  switch (ch.toUpperCase()) {
-    case 'P':
-      return 'FU';
-    case 'L':
-      return 'KY';
-    case 'N':
-      return 'KE';
-    case 'S':
-      return 'GI';
-    case 'G':
-      return 'KI';
-    case 'B':
-      return 'KA';
-    case 'R':
-      return 'HI';
-    case 'K':
-      return 'OU';
-    default:
-      return null;
-  }
+export function extractPieceCodesFromSfen(
+  sfen: string | null,
+  mappingService: PieceMappingService,
+): Set<string> {
+  return mappingService.extractDisplayCharsFromSfen(sfen);
 }

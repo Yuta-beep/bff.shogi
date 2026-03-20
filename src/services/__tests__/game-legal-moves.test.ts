@@ -1,9 +1,28 @@
 import { describe, expect, it } from 'bun:test';
 
 import { createLoadGameLegalMoves } from '@/services/game-legal-moves';
+import { PieceMappingService } from '@/services/piece-mapping';
 
 describe('loadGameLegalMoves', () => {
   it('loads current position, enriches it, and returns backend legal moves', async () => {
+    const mappingService = PieceMappingService.fromStatic([
+      {
+        pieceId: 1,
+        sfenCode: 'P',
+        displayChar: 'FU',
+        canonicalCode: 'pawn',
+        isSpecial: false,
+        isPromoted: false,
+      },
+      {
+        pieceId: 2,
+        sfenCode: 'K',
+        displayChar: 'OU',
+        canonicalCode: 'king',
+        isSpecial: false,
+        isPromoted: false,
+      },
+    ]);
     const loadGameLegalMoves = createLoadGameLegalMoves({
       loadGameState: async () => ({
         gameId: 'game-1',
@@ -53,6 +72,7 @@ describe('loadGameLegalMoves', () => {
           },
         ],
       }),
+      mappingService,
     });
 
     const result = await loadGameLegalMoves({ gameId: 'game-1' });

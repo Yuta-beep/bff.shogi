@@ -8,6 +8,7 @@ import {
   markGameFinished,
   CommitGameMoveError,
 } from '@/services/game-move';
+import { PieceMappingService } from '@/services/piece-mapping';
 
 export type ExecuteAiTurnInput = {
   gameId: string;
@@ -29,7 +30,13 @@ export async function executeAiTurn(input: ExecuteAiTurnInput): Promise<AiTurnRe
     );
   }
 
-  const currentPosition = await enrichPosition(input.gameId, gameState.position, moveNo);
+  const mappingService = await PieceMappingService.fromDb();
+  const currentPosition = await enrichPosition(
+    input.gameId,
+    gameState.position,
+    moveNo,
+    mappingService,
+  );
   const normalizedConfig = normalizeEngineConfig(input.engineConfig);
   const aiRequest = {
     gameId: input.gameId,
