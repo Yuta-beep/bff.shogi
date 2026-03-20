@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 import { isPublishedNow } from '@/lib/time';
 
 type StageRow = {
@@ -97,7 +98,6 @@ export async function getStageBattleSetup(stageId: number) {
   const rewards = rewardRes.error ? [] : (rewardRes.data ?? []);
 
   const storageUrlByAsset = new Map<string, string | null>();
-  const signedUrlTtlSec = 60 * 60;
 
   for (const row of placementRes.data ?? []) {
     const piece = toPieceRow(row);
@@ -108,14 +108,8 @@ export async function getStageBattleSetup(stageId: number) {
     const cacheKey = `${bucket}::${key}`;
     if (storageUrlByAsset.has(cacheKey)) continue;
 
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .createSignedUrl(key, signedUrlTtlSec);
-    if (error) {
-      storageUrlByAsset.set(cacheKey, null);
-      continue;
-    }
-    storageUrlByAsset.set(cacheKey, data?.signedUrl ?? null);
+    const imageUrl = await getStorageAssetUrl(bucket, key);
+    storageUrlByAsset.set(cacheKey, imageUrl);
   }
 
   return {
@@ -206,7 +200,6 @@ export async function listPieceCatalog() {
   if (stagePieceRes.error) throw stagePieceRes.error;
 
   const storageUrlByAsset = new Map<string, string | null>();
-  const signedUrlTtlSec = 60 * 60;
 
   for (const row of piecesRes.data ?? []) {
     const bucket = (row as any).image_bucket as string | null | undefined;
@@ -216,14 +209,8 @@ export async function listPieceCatalog() {
     const cacheKey = `${bucket}::${key}`;
     if (storageUrlByAsset.has(cacheKey)) continue;
 
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .createSignedUrl(key, signedUrlTtlSec);
-    if (error) {
-      storageUrlByAsset.set(cacheKey, null);
-      continue;
-    }
-    storageUrlByAsset.set(cacheKey, data?.signedUrl ?? null);
+    const imageUrl = await getStorageAssetUrl(bucket, key);
+    storageUrlByAsset.set(cacheKey, imageUrl);
   }
 
   const movePatternIds = [
