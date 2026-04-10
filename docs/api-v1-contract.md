@@ -59,6 +59,7 @@
 
 ### `GET /api/v1/stages/:stageNo/battle-setup`
 - Success `200`: `data = { stage, labels, board, enemyRoster, rewards }`
+  - `labels.stageLabel`: 表示用。`stage.stageName`（マスタの `stage_name`）と同一。
 - Errors:
   - `400 INVALID_STAGE_NO`
   - `403 LOCKED`

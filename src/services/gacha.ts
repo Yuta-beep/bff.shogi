@@ -31,6 +31,7 @@ type GachaPieceJoinRow = {
         rarity: string;
         image_bucket: string | null;
         image_key: string | null;
+        move_description_ja: string | null;
       }
     | {
         piece_id: number;
@@ -39,6 +40,7 @@ type GachaPieceJoinRow = {
         rarity: string;
         image_bucket: string | null;
         image_key: string | null;
+        move_description_ja: string | null;
       }[]
     | null;
 };
@@ -50,6 +52,7 @@ function toPieceRow(row: GachaPieceJoinRow): {
   rarity: string;
   image_bucket: string | null;
   image_key: string | null;
+  move_description_ja: string | null;
 } | null {
   if (Array.isArray(row.m_piece)) {
     return row.m_piece[0] ?? null;
@@ -61,6 +64,17 @@ export type GachaLobbyBanner = {
   key: string;
   name: string;
   rareRateText: string;
+  /** HTML 版の data-gacha-hit-rate に相当（駒ごとの重みから算出した割合） */
+  pieceRateText: string;
+  description: string | null;
+  lineup: Array<{
+    char: string;
+    name: string;
+    rarity: string;
+    weight: number;
+    /** master.m_piece.move_description_ja */
+    description: string | null;
+  }>;
   usesGold?: boolean;
   pawnCost: number;
   goldCost: number;
@@ -121,6 +135,8 @@ type ActiveGacha = {
     weight: number;
     imageBucket: string | null;
     imageKey: string | null;
+    /** master.m_piece.move_description_ja */
+    description: string | null;
   }>;
 };
 
@@ -146,6 +162,28 @@ function formatRatePercent(rate: number): string {
 
 function formatRareRateText(rates: ActiveGacha['rates']): string {
   return `R ${formatRatePercent(rates.R)} / SR ${formatRatePercent(rates.SR)} / UR ${formatRatePercent(rates.UR)} / SSR ${formatRatePercent(rates.SSR)}`;
+}
+
+/** gacha_room.html の並び（うかんむり → ひへん → しんにょう → 漢検） */
+const GACHA_LOBBY_DISPLAY_ORDER: string[] = ['ukanmuri', 'hiHen', 'shinnyo', 'kanken1'];
+
+function formatPieceRateLine(pieces: ActiveGacha['pieces']): string {
+  const total = pieces.reduce((sum, p) => sum + Math.max(0, p.weight), 0);
+  if (total <= 0) return '';
+  return pieces
+    .map((p) => `${p.char}${Math.round((Math.max(0, p.weight) / total) * 100)}%`)
+    .join('・');
+}
+
+function sortLobbyBanners(banners: GachaLobbyBanner[]): GachaLobbyBanner[] {
+  return [...banners].sort((a, b) => {
+    const ia = GACHA_LOBBY_DISPLAY_ORDER.indexOf(a.key);
+    const ib = GACHA_LOBBY_DISPLAY_ORDER.indexOf(b.key);
+    if (ia === -1 && ib === -1) return a.key.localeCompare(b.key);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
 }
 
 function rollRarity(rates: ActiveGacha['rates']): 'N' | 'R' | 'SR' | 'UR' | 'SSR' {
@@ -180,7 +218,9 @@ async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {
   const { data: pieceRows, error: pieceError } = await supabaseAdmin
     .schema('master')
     .from('m_gacha_piece')
-    .select('gacha_id,weight,m_piece:piece_id(piece_id,kanji,name,rarity,image_bucket,image_key)')
+    .select(
+      'gacha_id,weight,m_piece:piece_id(piece_id,kanji,name,rarity,image_bucket,image_key,move_description_ja)',
+    )
     .in('gacha_id', gachaIds)
     .eq('is_active', true);
   if (pieceError) throw pieceError;
@@ -220,6 +260,9 @@ async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {
         weight: toNumber(r.row.weight, 1),
         imageBucket: r.piece!.image_bucket,
         imageKey: r.piece!.image_key,
+        description: r.piece!.move_description_ja?.trim()
+          ? r.piece!.move_description_ja.trim()
+          : null,
       })),
   }));
 }
@@ -254,6 +297,15 @@ export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot>
       key: gacha.gachaCode,
       name: gacha.gachaName,
       rareRateText: formatRareRateText(gacha.rates),
+      pieceRateText: formatPieceRateLine(gacha.pieces),
+      description: null,
+      lineup: gacha.pieces.map((p) => ({
+        char: p.char,
+        name: p.name,
+        rarity: p.rarity,
+        weight: p.weight,
+        description: p.description,
+      })),
       usesGold: gacha.costs.gold > 0,
       pawnCost: gacha.costs.pawn,
       goldCost: gacha.costs.gold,
@@ -262,7 +314,7 @@ export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot>
   }
 
   return {
-    banners,
+    banners: sortLobbyBanners(banners),
     pawnCurrency: wallet.pawnCurrency,
     goldCurrency: wallet.goldCurrency,
     history: [],
@@ -384,7 +436,7 @@ export async function rollGacha(userId: string, gachaCode: string): Promise<Roll
       char: picked.char,
       name: picked.name,
       rarity: picked.rarity,
-      description: `${picked.name}を獲得しました。`,
+      description: picked.description ?? `${picked.name}を獲得しました。`,
       imageSignedUrl,
     },
     alreadyOwned,

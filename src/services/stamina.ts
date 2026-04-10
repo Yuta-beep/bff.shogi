@@ -54,10 +54,16 @@ export async function getPlayerStamina(userId: string): Promise<PlayerStamina> {
   if (error) throw error;
   if (!data) throw new Error('Player not found');
 
+  const rawUpdatedAt = data.stamina_updated_at as string | null | undefined;
+  const updatedAt =
+    rawUpdatedAt && !Number.isNaN(new Date(rawUpdatedAt).getTime())
+      ? new Date(rawUpdatedAt)
+      : new Date();
+
   const { stamina, nextRecoveryAt } = calculateCurrentStamina(
     Number(data.stamina),
     Number(data.max_stamina),
-    new Date(data.stamina_updated_at as string),
+    updatedAt,
   );
 
   return { stamina, maxStamina: Number(data.max_stamina), nextRecoveryAt };
@@ -80,7 +86,11 @@ export async function deductPlayerStamina(userId: string, cost: number): Promise
 
   const storedStamina = Number(data.stamina);
   const maxStamina = Number(data.max_stamina);
-  const updatedAt = new Date(data.stamina_updated_at as string);
+  const rawUpdatedAt = data.stamina_updated_at as string | null | undefined;
+  const updatedAt =
+    rawUpdatedAt && !Number.isNaN(new Date(rawUpdatedAt).getTime())
+      ? new Date(rawUpdatedAt)
+      : new Date();
 
   const { stamina: currentStamina, ticksPassed } = calculateCurrentStamina(
     storedStamina,

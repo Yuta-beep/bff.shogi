@@ -68,7 +68,7 @@ export function createGetBattleSetup(
           stageCategory: stage.stage_category ?? 'normal',
         },
         labels: {
-          stageLabel: `STAGE ${stage.stage_no}`,
+          stageLabel: stage.stage_name,
           turnLabel: 'TURN 1',
           handLabel: '持ち駒',
         },

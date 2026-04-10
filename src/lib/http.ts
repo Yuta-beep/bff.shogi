@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
 
 export function jsonOk<T>(data: T, init?: ResponseInit) {
-  return NextResponse.json({ ok: true, data }, withCors(init));
+  try {
+    return NextResponse.json({ ok: true, data }, withCors(init));
+  } catch (serializationError: unknown) {
+    const message =
+      serializationError instanceof Error
+        ? serializationError.message
+        : 'Response serialization failed';
+    console.error('[jsonOk] failed to serialize response', serializationError);
+    return NextResponse.json(
+      { ok: false, error: { code: 'INTERNAL_ERROR', message } },
+      withCors({ status: 500 }),
+    );
+  }
 }
 
 export function jsonError(code: string, message: string, status = 400, init?: ResponseInit) {

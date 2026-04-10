@@ -65,7 +65,7 @@ describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
           stageCategory: 'normal',
         },
         labels: {
-          stageLabel: 'STAGE 1',
+          stageLabel: 'S1',
           turnLabel: 'TURN 1',
           handLabel: '持ち駒',
         },

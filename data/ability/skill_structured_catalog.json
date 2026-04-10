@@ -707,10 +707,7 @@
           "source": "seed_master_piece.sql",
           "sentenceCount": 1,
           "requiredAllyKanji": "砂",
-          "relativePositions": [
-            "left",
-            "right"
-          ]
+          "relativePositions": ["left", "right"]
         },
         "effects": [
           {
@@ -1174,10 +1171,7 @@
           "source": "seed_master_piece.sql",
           "sentenceCount": 1,
           "summonPieceKanji": "岩",
-          "positions": [
-            "left",
-            "right"
-          ],
+          "positions": ["left", "right"],
           "blockMovement": true
         },
         "effects": [
