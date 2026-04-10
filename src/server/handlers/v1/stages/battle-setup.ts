@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { effectiveStageStaminaCost } from '@/lib/stage-stamina';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { isPublishedNow } from '@/lib/time';
 import { getStageBattleSetup, getStageByNo } from '@/services/stage-master';
@@ -49,7 +50,7 @@ export function createGetBattleSetup(
         }
       }
 
-      const staminaCost = Number(stage.stamina_cost ?? 0);
+      const staminaCost = effectiveStageStaminaCost(stage.stamina_cost);
       if (staminaCost > 0) {
         if (!userId) {
           return jsonError('UNAUTHORIZED', 'Authentication required to enter this stage', 401);

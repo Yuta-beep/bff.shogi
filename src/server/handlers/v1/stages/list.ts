@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { effectiveStageStaminaCost } from '@/lib/stage-stamina';
 import { listPublishedStages } from '@/services/stage-master';
 
 type StageListDeps = {
@@ -24,7 +25,7 @@ export function createGetStageList(deps: StageListDeps = { listPublishedStages }
           clearConditionType: row.clear_condition_type ?? 'defeat_boss',
           clearConditionParams: row.clear_condition_params ?? {},
           recommendedPower: row.recommended_power ?? null,
-          staminaCost: row.stamina_cost ?? 0,
+          staminaCost: effectiveStageStaminaCost(row.stamina_cost),
           canStart: true,
         })),
         note: 'NO_USER_PROGRESS_TABLE_YET',
