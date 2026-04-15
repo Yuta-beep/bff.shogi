@@ -1127,7 +1127,7 @@
       "skillId": 3,
       "pieceChars": ["炎"],
       "source": {
-        "skillText": "10%の確率で周囲の敵駒を消滅させる。",
+        "skillText": "20%の確率で周囲の敵駒を消滅させる。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_3"
@@ -1146,7 +1146,7 @@
           "group": "probability",
           "type": "chance_roll",
           "params": {
-            "procChance": 0.1
+            "procChance": 0.2
           }
         },
         {

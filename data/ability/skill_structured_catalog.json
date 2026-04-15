@@ -79,12 +79,12 @@
     },
     {
       "id": 3,
-      "skillDesc": "10%の確率で周囲の敵駒を消滅させる。",
+      "skillDesc": "20%の確率で周囲の敵駒を消滅させる。",
       "structured": {
         "skillType": "passive",
         "targetRule": "adjacent_area",
         "effectSummaryType": "remove_piece",
-        "procChance": 0.1,
+        "procChance": 0.2,
         "durationTurns": null,
         "triggerTiming": "passive",
         "scriptHook": null,
@@ -99,13 +99,13 @@
             "triggerTiming": "passive",
             "effectType": "remove_piece",
             "targetRule": "adjacent_area",
-            "procChance": 0.1,
+            "procChance": 0.2,
             "durationTurns": null,
             "radius": 1,
             "valueNum": null,
-            "valueText": "10%の確率で周囲の敵駒を消滅させる",
+            "valueText": "20%の確率で周囲の敵駒を消滅させる",
             "params": {
-              "sourceSentence": "10%の確率で周囲の敵駒を消滅させる"
+              "sourceSentence": "20%の確率で周囲の敵駒を消滅させる"
             }
           }
         ]
