@@ -31,6 +31,101 @@ type PersistedGameRow = {
   winner_side: GameStatusSnapshot['winnerSide'];
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object') return value as Record<string, unknown>;
+  return {};
+}
+
+function normalizeHandCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function decrementHandsToken(handsPart: string, targetToken: string): string {
+  if (!handsPart || handsPart === '-') return '-';
+  const chunks: Array<{ count: number; token: string }> = [];
+  let i = 0;
+  while (i < handsPart.length) {
+    let num = '';
+    while (i < handsPart.length && handsPart[i] >= '0' && handsPart[i] <= '9') {
+      num += handsPart[i];
+      i += 1;
+    }
+    if (i >= handsPart.length) break;
+    const token = handsPart[i] ?? '';
+    i += 1;
+    const count = num.length > 0 ? Math.max(1, Number(num)) : 1;
+    if (!token) continue;
+    chunks.push({ count, token });
+  }
+  let consumed = false;
+  for (const chunk of chunks) {
+    if (!consumed && chunk.token === targetToken && chunk.count > 0) {
+      chunk.count -= 1;
+      consumed = true;
+    }
+  }
+  const normalized = chunks
+    .filter((chunk) => chunk.count > 0)
+    .map((chunk) => `${chunk.count > 1 ? String(chunk.count) : ''}${chunk.token}`)
+    .join('');
+  return normalized.length > 0 ? normalized : '-';
+}
+
+function enforceDroppedPieceConsumed(
+  position: CanonicalPosition,
+  move: AiMove,
+  mappingService: PieceMappingService,
+): CanonicalPosition {
+  if (!move.dropPieceCode) return position;
+  const side: 'player' | 'enemy' = position.sideToMove === 'player' ? 'enemy' : 'player';
+  // 上の行は nextPosition 側で手番が反転済みなので、直前の着手者を逆算する
+  const want = move.dropPieceCode.toUpperCase();
+
+  const handsRoot = asRecord(position.hands);
+  const playerRaw = asRecord(handsRoot.player);
+  const enemyRaw = asRecord(handsRoot.enemy);
+  const player = { ...playerRaw };
+  const enemy = { ...enemyRaw };
+  const bag = side === 'player' ? player : enemy;
+
+  let matchedKey: string | null = null;
+  for (const key of Object.keys(bag)) {
+    if (key.toUpperCase() === want) {
+      matchedKey = key;
+      break;
+    }
+  }
+  const targetKey = matchedKey ?? want;
+  const current = normalizeHandCount(bag[targetKey]);
+  const decrementedCount = Math.max(0, current - 1);
+  if (decrementedCount <= 0) {
+    delete bag[targetKey];
+  } else {
+    bag[targetKey] = decrementedCount;
+  }
+
+  const next = {
+    ...position,
+    hands: {
+      ...handsRoot,
+      player,
+      enemy,
+    },
+  };
+
+  const token = mappingService.displayCharToSfen(want);
+  if (!next.sfen || !token || token.length !== 1) {
+    return next;
+  }
+  const parts = next.sfen.trim().split(/\s+/);
+  if (parts.length < 4) {
+    return next;
+  }
+  const targetToken = side === 'player' ? token.toUpperCase() : token.toLowerCase();
+  parts[2] = decrementHandsToken(parts[2] ?? '-', targetToken);
+  return { ...next, sfen: parts.join(' ') };
+}
+
 type LoadedGameState = {
   gameId: string;
   position: CanonicalPosition;
@@ -161,7 +256,8 @@ export function createCommitGameMove(
       selectedMove: normalizedMove,
     });
     metrics.applyMoveMs = Date.now() - applyStart;
-    const nextGame = deriveGameStatus(nextPosition, mappingService);
+    const persistedPosition = enforceDroppedPieceConsumed(nextPosition, normalizedMove, mappingService);
+    const nextGame = deriveGameStatus(persistedPosition, mappingService);
 
     const persistStart = Date.now();
     await deps.persistMove({
@@ -170,7 +266,7 @@ export function createCommitGameMove(
       actorSide: input.actorSide,
       move: normalizedMove,
       thoughtMs: input.thoughtMs ?? null,
-      position: nextPosition,
+      position: persistedPosition,
       game: nextGame,
     });
     metrics.persistMoveMs = Date.now() - persistStart;
@@ -208,7 +304,7 @@ export function createCommitGameMove(
       move: normalizedMove,
       skillTriggered: isSkillTriggeredMove(normalizedMove),
       serverAppliedAt,
-      position: nextPosition,
+      position: persistedPosition,
       game: nextGame,
     };
   };
