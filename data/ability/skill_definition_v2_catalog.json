@@ -1672,15 +1672,23 @@
       },
       "classification": {
         "implementationKind": "primitive",
-        "tags": ["continuous_aura", "summon_piece"]
+        "tags": ["move_trigger", "summon_piece", "probabilistic"]
       },
       "trigger": {
-        "group": "continuous",
-        "type": "continuous_aura"
+        "group": "event_move",
+        "type": "after_move"
       },
       "conditions": [
         {
           "order": 1,
+          "group": "probability",
+          "type": "chance_roll",
+          "params": {
+            "procChance": 0.1
+          }
+        },
+        {
+          "order": 2,
           "group": "board_state",
           "type": "adjacent_empty_exists",
           "params": {}

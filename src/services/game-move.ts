@@ -256,7 +256,11 @@ export function createCommitGameMove(
       selectedMove: normalizedMove,
     });
     metrics.applyMoveMs = Date.now() - applyStart;
-    const persistedPosition = enforceDroppedPieceConsumed(nextPosition, normalizedMove, mappingService);
+    const persistedPosition = enforceDroppedPieceConsumed(
+      nextPosition,
+      normalizedMove,
+      mappingService,
+    );
     const nextGame = deriveGameStatus(persistedPosition, mappingService);
 
     const persistStart = Date.now();

@@ -309,7 +309,7 @@ values
   ('skill_873bd39173c7', 'Skill 873bd3', '移動時20％の確率で相手の手持ち駒を1つ燃やす。', NULL, true, now(), now()),
   ('skill_e2332982ce58', 'Skill e23329', '水の流れにより周囲の敵駒を押し流す。', NULL, true, now(), now()),
   ('skill_19507c743560', 'Skill 19507c', '波の伝播により周囲の敵駒を押し流す。', NULL, true, now(), now()),
-  ('skill_483dffc20eaa', 'Skill 483dff', '木の成長により周囲に「木」駒を召喚する。', NULL, true, now(), now()),
+  ('skill_483dffc20eaa', 'Skill 483dff', '10%の確率で木の成長により周囲に「木」駒を召喚する。', NULL, true, now(), now()),
   ('skill_a5f4f93be687', 'Skill a5f4f9', '各敵駒ごとに10%の確率で、ランダムな方向に1マス移動させる。', NULL, true, now(), now()),
   ('skill_f8ad27d5f81d', 'Skill f8ad27', '壁で反射して継続移動する。', NULL, true, now(), now()),
   ('skill_7fc68569e4d8', 'Skill 7fc685', '敵駒に取られたとき、40％の確率で自分の手持ち駒に戻る', NULL, true, now(), now()),

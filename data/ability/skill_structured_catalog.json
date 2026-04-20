@@ -220,7 +220,7 @@
         "skillType": "passive",
         "targetRule": "adjacent_area",
         "effectSummaryType": "summon_piece",
-        "procChance": null,
+        "procChance": 0.1,
         "durationTurns": null,
         "triggerTiming": "passive",
         "scriptHook": null,
@@ -235,13 +235,13 @@
             "triggerTiming": "passive",
             "effectType": "summon_piece",
             "targetRule": "adjacent_area",
-            "procChance": null,
+            "procChance": 0.1,
             "durationTurns": null,
             "radius": 1,
             "valueNum": null,
-            "valueText": "木の成長により周囲に「木」駒を召喚する",
+            "valueText": "10%の確率で木の成長により周囲に「木」駒を召喚する",
             "params": {
-              "sourceSentence": "木の成長により周囲に「木」駒を召喚する"
+              "sourceSentence": "10%の確率で木の成長により周囲に「木」駒を召喚する"
             }
           }
         ]
