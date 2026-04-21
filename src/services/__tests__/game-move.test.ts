@@ -29,6 +29,38 @@ function buildMappingService(): PieceMappingService {
       isSpecial: false,
       isPromoted: true,
     },
+    {
+      pieceId: 201,
+      sfenCode: 'ZAA',
+      displayChar: 'COPPER',
+      canonicalCode: 'copper',
+      isSpecial: true,
+      isPromoted: false,
+    },
+    {
+      pieceId: 202,
+      sfenCode: 'ZAE',
+      displayChar: 'IRON',
+      canonicalCode: 'iron',
+      isSpecial: true,
+      isPromoted: false,
+    },
+    {
+      pieceId: 203,
+      sfenCode: 'ZAB',
+      displayChar: 'LEAD',
+      canonicalCode: 'lead',
+      isSpecial: true,
+      isPromoted: false,
+    },
+    {
+      pieceId: 204,
+      sfenCode: 'ZAC',
+      displayChar: 'TIN',
+      canonicalCode: 'tin',
+      isSpecial: true,
+      isPromoted: false,
+    },
   ]);
 }
 
@@ -156,5 +188,112 @@ describe('commitGameMove', () => {
     }
 
     expect(thrown instanceof CommitGameMoveError).toBe(true);
+  });
+
+  it('keeps captured mineral hands on actor side only', async () => {
+    const commitGameMove = createCommitGameMove({
+      mappingService: buildMappingService(),
+      loadGameState: async () => ({
+        gameId: 'game-mineral',
+        position: {
+          sideToMove: 'player',
+          turnNumber: 7,
+          moveCount: 6,
+          sfen: '4k4/9/9/9/9/9/9/9/4K4 b - 7',
+          stateHash: null,
+          boardState: {},
+          hands: { player: {}, enemy: {} },
+        },
+        game: { status: 'in_progress', result: null, winnerSide: null },
+      }),
+      enrichPosition: async (_gameId, position) => ({ ...position, legalMoves: [] }),
+      applyMove: async () => ({
+        sideToMove: 'enemy',
+        turnNumber: 8,
+        moveCount: 7,
+        sfen: '4k4/9/9/9/9/9/9/9/4K4 w A 8',
+        stateHash: null,
+        boardState: {},
+        hands: { player: { COPPER: 1 }, enemy: { COPPER: 1 } },
+      }),
+      persistMove: async () => {},
+      insertInferenceLog: async () => {},
+    });
+
+    const result = await commitGameMove({
+      gameId: 'game-mineral',
+      moveNo: 7,
+      actorSide: 'player',
+      move: {
+        fromRow: 4,
+        fromCol: 4,
+        toRow: 3,
+        toCol: 4,
+        pieceCode: 'FU',
+        promote: false,
+        dropPieceCode: null,
+        capturedPieceCode: 'COPPER',
+        notation: null,
+      },
+    });
+
+    expect(result.position.hands).toEqual({
+      player: { COPPER: 1 },
+      enemy: {},
+    });
+  });
+
+  it('consumes dropped piece from actor even when side_to_move does not flip', async () => {
+    const commitGameMove = createCommitGameMove({
+      mappingService: buildMappingService(),
+      loadGameState: async () => ({
+        gameId: 'game-extra-turn',
+        position: {
+          sideToMove: 'enemy',
+          turnNumber: 10,
+          moveCount: 9,
+          sfen: '4k4/9/9/9/9/9/9/9/4K4 w z 10',
+          stateHash: null,
+          boardState: {},
+          hands: { player: {}, enemy: { TIN: 1 } },
+        },
+        game: { status: 'in_progress', result: null, winnerSide: null },
+      }),
+      enrichPosition: async (_gameId, position) => ({ ...position, legalMoves: [] }),
+      applyMove: async () => ({
+        // 追加行動スキル等で手番が維持されたケースを模擬
+        sideToMove: 'enemy',
+        turnNumber: 11,
+        moveCount: 10,
+        sfen: '4k4/9/9/9/4z4/9/9/9/4K4 w z 11',
+        stateHash: null,
+        boardState: {},
+        hands: { player: {}, enemy: { TIN: 1 } },
+      }),
+      persistMove: async () => {},
+      insertInferenceLog: async () => {},
+    });
+
+    const result = await commitGameMove({
+      gameId: 'game-extra-turn',
+      moveNo: 10,
+      actorSide: 'enemy',
+      move: {
+        fromRow: null,
+        fromCol: null,
+        toRow: 4,
+        toCol: 4,
+        pieceCode: 'TIN',
+        promote: false,
+        dropPieceCode: 'TIN',
+        capturedPieceCode: null,
+        notation: null,
+      },
+    });
+
+    expect(result.position.hands).toEqual({
+      player: {},
+      enemy: {},
+    });
   });
 });

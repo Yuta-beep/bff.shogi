@@ -74,11 +74,11 @@ function decrementHandsToken(handsPart: string, targetToken: string): string {
 function enforceDroppedPieceConsumed(
   position: CanonicalPosition,
   move: AiMove,
+  actorSide: 'player' | 'enemy',
   mappingService: PieceMappingService,
 ): CanonicalPosition {
   if (!move.dropPieceCode) return position;
-  const side: 'player' | 'enemy' = position.sideToMove === 'player' ? 'enemy' : 'player';
-  // 上の行は nextPosition 側で手番が反転済みなので、直前の着手者を逆算する
+  const side: 'player' | 'enemy' = actorSide;
   const want = move.dropPieceCode.toUpperCase();
 
   const handsRoot = asRecord(position.hands);
@@ -123,6 +123,117 @@ function enforceDroppedPieceConsumed(
   }
   const targetToken = side === 'player' ? token.toUpperCase() : token.toLowerCase();
   parts[2] = decrementHandsToken(parts[2] ?? '-', targetToken);
+  return { ...next, sfen: parts.join(' ') };
+}
+
+function reconcileStarReturnOwnership(
+  position: CanonicalPosition,
+  move: AiMove,
+  actorSide: 'player' | 'enemy',
+  mappingService: PieceMappingService,
+): CanonicalPosition {
+  const captured = move.capturedPieceCode?.toUpperCase();
+  if (captured !== 'HOS' && captured !== '星') {
+    return position;
+  }
+  const handsRoot = asRecord(position.hands);
+  const playerRaw = asRecord(handsRoot.player);
+  const enemyRaw = asRecord(handsRoot.enemy);
+  const player = { ...playerRaw };
+  const enemy = { ...enemyRaw };
+
+  const actorBag = actorSide === 'player' ? player : enemy;
+  const ownerBag = actorSide === 'player' ? enemy : player;
+  const actorHosCount = normalizeHandCount(actorBag.HOS);
+  const ownerHosCount = normalizeHandCount(ownerBag.HOS);
+  // 星スキル発動時に発生する「双方の手駒に HOS が同時に載る」異常だけを補正する。
+  if (actorHosCount <= 0 || ownerHosCount <= 0) {
+    return position;
+  }
+
+  const nextActorCount = Math.max(0, actorHosCount - 1);
+  if (nextActorCount <= 0) {
+    delete actorBag.HOS;
+  } else {
+    actorBag.HOS = nextActorCount;
+  }
+
+  const next = {
+    ...position,
+    hands: {
+      ...handsRoot,
+      player,
+      enemy,
+    },
+  };
+
+  const token = mappingService.displayCharToSfen('HOS');
+  if (!next.sfen || !token || token.length !== 1) {
+    return next;
+  }
+  const parts = next.sfen.trim().split(/\s+/);
+  if (parts.length < 4) {
+    return next;
+  }
+  const targetToken = actorSide === 'player' ? token.toUpperCase() : token.toLowerCase();
+  parts[2] = decrementHandsToken(parts[2] ?? '-', targetToken);
+  return { ...next, sfen: parts.join(' ') };
+}
+
+function reconcileCapturedPieceOwnership(
+  position: CanonicalPosition,
+  move: AiMove,
+  actorSide: 'player' | 'enemy',
+  mappingService: PieceMappingService,
+): CanonicalPosition {
+  const captured = move.capturedPieceCode?.toUpperCase();
+  if (!captured) return position;
+  const handsRoot = asRecord(position.hands);
+  const playerRaw = asRecord(handsRoot.player);
+  const enemyRaw = asRecord(handsRoot.enemy);
+  const player = { ...playerRaw };
+  const enemy = { ...enemyRaw };
+
+  const actorBag = actorSide === 'player' ? player : enemy;
+  const ownerBag = actorSide === 'player' ? enemy : player;
+  const actorCount = normalizeHandCount(actorBag[captured]);
+  const ownerCount = normalizeHandCount(ownerBag[captured]);
+  // 取り直後に「双方が同時に同駒を所持」の異常だけ補正する。
+  if (actorCount <= 0 || ownerCount <= 0) {
+    return position;
+  }
+
+  const nextOwnerCount = Math.max(0, ownerCount - 1);
+  if (nextOwnerCount <= 0) {
+    delete ownerBag[captured];
+  } else {
+    ownerBag[captured] = nextOwnerCount;
+  }
+
+  const next = {
+    ...position,
+    hands: {
+      ...handsRoot,
+      player,
+      enemy,
+    },
+  };
+
+  const token = mappingService.displayCharToSfen(captured);
+  if (!next.sfen || !token || token.length !== 1) {
+    return next;
+  }
+  const parts = next.sfen.trim().split(/\s+/);
+  if (parts.length < 4) {
+    return next;
+  }
+  const ownerToken =
+    actorSide === 'player'
+      ? /^[A-Za-z]$/.test(token)
+        ? token.toLowerCase()
+        : token
+      : token.toUpperCase();
+  parts[2] = decrementHandsToken(parts[2] ?? '-', ownerToken);
   return { ...next, sfen: parts.join(' ') };
 }
 
@@ -256,9 +367,22 @@ export function createCommitGameMove(
       selectedMove: normalizedMove,
     });
     metrics.applyMoveMs = Date.now() - applyStart;
-    const persistedPosition = enforceDroppedPieceConsumed(
+    const dropConsumedPosition = enforceDroppedPieceConsumed(
       nextPosition,
       normalizedMove,
+      input.actorSide,
+      mappingService,
+    );
+    const capturedOwnershipFixed = reconcileCapturedPieceOwnership(
+      dropConsumedPosition,
+      normalizedMove,
+      input.actorSide,
+      mappingService,
+    );
+    const persistedPosition = reconcileStarReturnOwnership(
+      capturedOwnershipFixed,
+      normalizedMove,
+      input.actorSide,
       mappingService,
     );
     const nextGame = deriveGameStatus(persistedPosition, mappingService);

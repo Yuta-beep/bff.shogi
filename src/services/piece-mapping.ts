@@ -29,6 +29,25 @@ type PieceMappingRow = {
   is_promoted: boolean;
 };
 
+// ai.shogi 側の piece_mapping.rs と同じ 1 文字 SFEN 割当。
+// DB が多文字（例: ZAA）でも、エンジン実行時の canonical SFEN はこちらで流れる。
+const ENGINE_ONE_CHAR_SFEN_BY_DISPLAY: Readonly<Record<string, string>> = {
+  COPPER: 'A',
+  IRON: 'O',
+  TIN: 'Z',
+  LEAD: '!',
+  TREASURE: '$',
+};
+
+function normalizeSfenTokenForEngine(entry: PieceMappingEntry): string | null {
+  const raw = entry.sfenCode?.trim() ?? '';
+  if (!raw) return null;
+  const upperDisplay = entry.displayChar.toUpperCase();
+  const engineToken = ENGINE_ONE_CHAR_SFEN_BY_DISPLAY[upperDisplay];
+  if (engineToken) return engineToken;
+  return raw.toUpperCase();
+}
+
 // ── モジュールレベルキャッシュ ─────────────────────────────────────────────────
 
 let _moduleCache: PieceMappingService | null = null;
@@ -57,8 +76,9 @@ export class PieceMappingService {
     this.displayToSfen = new Map();
 
     for (const entry of entries) {
-      if (entry.sfenCode) {
-        const token = entry.sfenCode.toUpperCase();
+      const normalizedToken = normalizeSfenTokenForEngine(entry);
+      if (normalizedToken) {
+        const token = normalizedToken;
         this.sfenTokenToDisplay.set(token, entry.displayChar);
         this.displayToSfen.set(entry.displayChar.toUpperCase(), token);
       }

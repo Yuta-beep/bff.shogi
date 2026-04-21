@@ -332,6 +332,56 @@ describe('PieceMappingService.extractDisplayCharsFromSfen', () => {
     expect(codes.has('PC001')).toBe(true);
     expect(codes.has('OU')).toBe(true);
   });
+
+  it('鉱物駒は DB が多文字でもエンジン1文字SFENで抽出できる', () => {
+    const svc = PieceMappingService.fromStatic([
+      {
+        pieceId: 201,
+        sfenCode: 'ZAA',
+        displayChar: 'COPPER',
+        canonicalCode: 'copper',
+        isSpecial: true,
+        isPromoted: false,
+      },
+      {
+        pieceId: 202,
+        sfenCode: 'ZAB',
+        displayChar: 'LEAD',
+        canonicalCode: 'lead',
+        isSpecial: true,
+        isPromoted: false,
+      },
+    ]);
+    expect(svc.sfenCharToDisplayChar('a', false)).toBe('COPPER');
+    expect(svc.sfenCharToDisplayChar('!', false)).toBe('LEAD');
+    expect(svc.displayCharToSfen('COPPER')).toBe('A');
+    expect(svc.displayCharToSfen('LEAD')).toBe('!');
+  });
+
+  it('鉄・錫も 1文字SFEN O/Z で往復できる', () => {
+    const svc = PieceMappingService.fromStatic([
+      {
+        pieceId: 301,
+        sfenCode: 'ZAE',
+        displayChar: 'IRON',
+        canonicalCode: 'iron',
+        isSpecial: true,
+        isPromoted: false,
+      },
+      {
+        pieceId: 302,
+        sfenCode: 'ZAC',
+        displayChar: 'TIN',
+        canonicalCode: 'tin',
+        isSpecial: true,
+        isPromoted: false,
+      },
+    ]);
+    expect(svc.sfenCharToDisplayChar('o', false)).toBe('IRON');
+    expect(svc.sfenCharToDisplayChar('z', false)).toBe('TIN');
+    expect(svc.displayCharToSfen('IRON')).toBe('O');
+    expect(svc.displayCharToSfen('TIN')).toBe('Z');
+  });
 });
 
 // ── PieceMappingNotFoundError ─────────────────────────────────────────────────

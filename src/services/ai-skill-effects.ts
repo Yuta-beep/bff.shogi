@@ -5,6 +5,7 @@ import { PieceMappingService } from '@/services/piece-mapping';
 type PieceSkillRow = {
   piece_id: number;
   skill_id: number | null;
+  kanji: string | null;
 };
 
 type SkillMetaRow = {
@@ -227,7 +228,7 @@ export async function attachSkillEffectsToAiRequestWithClient(
   const { data: pieceRows, error: pieceError } = await client
     .schema('master')
     .from('m_piece')
-    .select('piece_id,skill_id')
+    .select('piece_id,skill_id,kanji')
     .eq('is_active', true)
     .in('piece_id', pieceIds);
   if (pieceError) throw pieceError;
@@ -235,10 +236,14 @@ export async function attachSkillEffectsToAiRequestWithClient(
   const skillToPieceCodes = new Map<number, string[]>();
   for (const row of (pieceRows ?? []) as PieceSkillRow[]) {
     if (!row.skill_id) continue;
-    const displayChar = pieceIdToDisplayChar.get(row.piece_id);
-    if (!displayChar) continue;
     const list = skillToPieceCodes.get(row.skill_id) ?? [];
-    if (!list.includes(displayChar)) list.push(displayChar);
+    const aliases = [pieceIdToDisplayChar.get(row.piece_id), row.kanji].filter(
+      (value): value is string => typeof value === 'string' && value.length > 0,
+    );
+    if (aliases.length === 0) continue;
+    for (const alias of aliases) {
+      if (!list.includes(alias)) list.push(alias);
+    }
     skillToPieceCodes.set(row.skill_id, list);
   }
 
@@ -306,11 +311,155 @@ export async function attachSkillEffectsToAiRequestWithClient(
       ? await loadLegacySkillEffects(client, legacySkillIds, skillToPieceCodes)
       : [];
 
+  const synthesizedLegacyDefinitions = synthesizeLegacyV2Definitions(
+    legacySkillIds,
+    skillMetaRows,
+    skillToPieceCodes,
+    legacyEffects,
+  );
+  if (synthesizedLegacyDefinitions.length > 0) {
+    if (!definitions) {
+      definitions = {
+        version: 'skill-definition-v2-legacy-bridge',
+        updatedAt: new Date().toISOString(),
+        sourceOfTruth: [],
+        definitions: [],
+      };
+    }
+    definitions.definitions.push(...synthesizedLegacyDefinitions);
+    definitions.sourceOfTruth.push(
+      ...synthesizedLegacyDefinitions.flatMap((definition) =>
+        definition.pieceChars.map((pieceChar) => ({
+          pieceChar,
+          skillText: String(definition.source.skillText ?? ''),
+          sourceFile: String(definition.source.sourceFile ?? ''),
+          sourceFunction: String(definition.source.sourceFunction ?? ''),
+        })),
+      ),
+    );
+  }
+
   return withSkillPayload(input, {
     registry,
     definitions,
     legacyEffects,
   });
+}
+
+function synthesizeLegacyV2Definitions(
+  legacySkillIds: number[],
+  skillMetaRows: SkillMetaRow[],
+  skillToPieceCodes: Map<number, string[]>,
+  legacyEffects: Record<string, unknown>[],
+): SkillDefinitionEntry[] {
+  if (legacySkillIds.length === 0 || legacyEffects.length === 0) return [];
+  const skillMetaById = new Map(skillMetaRows.map((row) => [row.skill_id, row]));
+  const effectsBySkill = new Map<number, LegacySkillEffectRow[]>();
+  for (const raw of legacyEffects) {
+    const skillId = Number(raw.skill_id);
+    if (!Number.isFinite(skillId)) continue;
+    const effectType = typeof raw.effect_type === 'string' ? raw.effect_type : '';
+    const targetRule = typeof raw.target_rule === 'string' ? raw.target_rule : '';
+    if (!effectType || !targetRule) continue;
+    const list = effectsBySkill.get(skillId) ?? [];
+    list.push({
+      skill_id: skillId,
+      effect_order: Number(raw.effect_order ?? list.length + 1),
+      effect_type: effectType,
+      target_rule: targetRule,
+      trigger_timing: typeof raw.trigger_timing === 'string' ? raw.trigger_timing : null,
+      proc_chance: typeof raw.proc_chance === 'number' ? raw.proc_chance : null,
+      duration_turns: typeof raw.duration_turns === 'number' ? raw.duration_turns : null,
+      value_num: typeof raw.value_num === 'number' ? raw.value_num : null,
+      value_text: typeof raw.value_text === 'string' ? raw.value_text : null,
+      params_json:
+        raw.params_json && typeof raw.params_json === 'object'
+          ? (raw.params_json as Record<string, unknown>)
+          : {},
+      is_active: true,
+    });
+    effectsBySkill.set(skillId, list);
+  }
+
+  const out: SkillDefinitionEntry[] = [];
+  for (const skillId of legacySkillIds) {
+    const legacy = effectsBySkill.get(skillId) ?? [];
+    if (legacy.length === 0) continue;
+    const meta = skillMetaById.get(skillId);
+    const triggerTypeRaw =
+      legacy.find((row) => row.trigger_timing)?.trigger_timing ??
+      meta?.trigger_type ??
+      'after_move';
+    // 鉄/錫は要件上「移動時トリガー」。legacy データが continuous_* でも after_move へ寄せる。
+    const triggerType =
+      skillId === 13 || skillId === 14
+        ? 'after_move'
+        : triggerTypeRaw === 'continuous_rule' || triggerTypeRaw === 'continuous_aura'
+          ? triggerTypeRaw
+          : 'after_move';
+    const triggerGroup = triggerType.startsWith('continuous') ? 'continuous' : 'event_move';
+    const conditions: SkillConditionDocument[] = [];
+    const procChance =
+      legacy.find((row) => typeof row.proc_chance === 'number')?.proc_chance ?? null;
+    if (
+      typeof procChance === 'number' &&
+      Number.isFinite(procChance) &&
+      procChance > 0 &&
+      procChance < 1
+    ) {
+      conditions.push({
+        order: 1,
+        group: 'probability',
+        type: 'chance_roll',
+        params: { procChance },
+      });
+    }
+    const effects: SkillEffectDocument[] = legacy.map((row, index) => {
+      const params: Record<string, unknown> = { ...(row.params_json ?? {}) };
+      if (row.effect_type === 'forced_move' && params.movementRule == null) {
+        params.movementRule = 'push_away';
+      }
+      if (row.effect_type === 'apply_status' && params.statusType == null) {
+        params.statusType = row.value_text ?? 'stun';
+      }
+      if (params.durationTurns == null && typeof row.duration_turns === 'number') {
+        params.durationTurns = row.duration_turns;
+      }
+      return {
+        order: index + 1,
+        group: row.effect_type === 'forced_move' ? 'piece_position' : 'piece_state',
+        type: row.effect_type,
+        target: {
+          group: 'adjacent',
+          selector: row.target_rule,
+        },
+        params,
+      };
+    });
+    out.push({
+      skillId,
+      pieceChars: skillToPieceCodes.get(skillId) ?? [],
+      source: {
+        skillText: meta?.skill_desc ?? '',
+        sourceKind: normalizeSourceKind(meta?.source_kind ?? null),
+        sourceFile: meta?.source_file ?? '',
+        sourceFunction: meta?.source_function ?? '',
+      },
+      classification: {
+        implementationKind: 'primitive',
+        tags: normalizeTagList(meta?.tags_json ?? []),
+      },
+      trigger: {
+        group: triggerGroup,
+        type: triggerType,
+      },
+      conditions,
+      effects,
+      scriptHook: null,
+      notes: 'legacy-bridged',
+    });
+  }
+  return out;
 }
 
 async function loadLegacySkillEffects(

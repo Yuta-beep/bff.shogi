@@ -422,7 +422,7 @@
       "skillId": 11,
       "pieceChars": ["闇"],
       "source": {
-        "skillText": "周囲の敵駒を次の番まで闇で覆う。",
+        "skillText": "周囲の敵駒を闇で包む。一度包まれた駒は敵に取られるまで闇が続く。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_11"
@@ -460,7 +460,7 @@
         }
       ],
       "scriptHook": null,
-      "notes": "root move 評価では隣接敵の存在を見て trace と tactical bonus に反映する"
+      "notes": "dark_blind はターン経過で消えず、駒が盤上にいる限り維持。取られた時に盤から外れ prune で除去。"
     },
     {
       "skillId": 23,
@@ -1179,18 +1179,18 @@
       "skillId": 12,
       "pieceChars": ["魔"],
       "source": {
-        "skillText": "周囲の敵駒を10%の確率で消滅させる。",
+        "skillText": "移動時10%の確率で周囲の敵駒を1体消滅させる。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_12"
       },
       "classification": {
         "implementationKind": "primitive",
-        "tags": ["continuous_aura", "enemy_remove", "remove_piece", "probabilistic"]
+        "tags": ["move_trigger", "enemy_remove", "remove_piece", "probabilistic"]
       },
       "trigger": {
-        "group": "continuous",
-        "type": "continuous_aura"
+        "group": "event_move",
+        "type": "after_move"
       },
       "conditions": [
         {
@@ -1225,7 +1225,7 @@
         }
       ],
       "scriptHook": null,
-      "notes": "炎と同型の remove_piece sample"
+      "notes": "辰(skill 48)と同様、移動完了後に確率判定して隣接敵1体を除去する"
     },
     {
       "skillId": 48,
