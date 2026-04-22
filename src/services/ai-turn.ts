@@ -1,6 +1,7 @@
 import type { AiTurnResult, EngineConfig } from '@/lib/ai-engine-contract';
 import { normalizeEngineConfig } from '@/lib/engine-config';
-import { requestAiMove } from '@/lib/ai-engine-client';
+import { requestAiMove, requestLegalMoves } from '@/lib/ai-engine-client';
+import { AiEngineHttpError } from '@/lib/ai-engine-errors';
 import {
   commitGameMove,
   loadGameState,
@@ -60,22 +61,59 @@ export async function executeAiTurn(input: ExecuteAiTurnInput): Promise<AiTurnRe
     };
   }
 
-  const committed = await commitGameMove({
-    gameId: input.gameId,
-    moveNo,
-    actorSide: currentPosition.sideToMove,
-    move: response.selectedMove,
-    thoughtMs: response.meta.thinkMs,
-    currentPosition,
-    aiInference: {
-      normalizedConfig,
-      requestPayload: aiRequest,
-      responsePayload: response,
-    },
-  });
+  let committed;
+  let selectedMove = response.selectedMove;
+  try {
+    committed = await commitGameMove({
+      gameId: input.gameId,
+      moveNo,
+      actorSide: currentPosition.sideToMove,
+      move: selectedMove,
+      thoughtMs: response.meta.thinkMs,
+      currentPosition,
+      aiInference: {
+        normalizedConfig,
+        requestPayload: aiRequest,
+        responsePayload: response,
+      },
+    });
+  } catch (error: unknown) {
+    const illegalApply =
+      error instanceof AiEngineHttpError &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      /ILLEGAL_MOVE|selected move is not legal for current position/i.test(error.body ?? '');
+    if (!illegalApply) {
+      throw error;
+    }
+
+    const legal = await requestLegalMoves({ position: currentPosition });
+    const fallbackMove = legal.legalMoves[0] ?? null;
+    if (!fallbackMove) {
+      throw error;
+    }
+
+    selectedMove = fallbackMove;
+    committed = await commitGameMove({
+      gameId: input.gameId,
+      moveNo,
+      actorSide: currentPosition.sideToMove,
+      move: selectedMove,
+      thoughtMs: response.meta.thinkMs,
+      currentPosition,
+      aiInference: {
+        normalizedConfig,
+        requestPayload: aiRequest,
+        responsePayload: {
+          ...response,
+          selectedMove,
+        },
+      },
+    });
+  }
 
   return {
-    selectedMove: response.selectedMove,
+    selectedMove,
     skillTriggered: committed.skillTriggered,
     meta: response.meta,
     position: committed.position,
