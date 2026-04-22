@@ -71,7 +71,19 @@ function decrementHandsToken(handsPart: string, targetToken: string): string {
   return normalized.length > 0 ? normalized : '-';
 }
 
+function handCountByCodeCaseInsensitive(
+  bag: Record<string, unknown>,
+  pieceCodeUpper: string,
+): number {
+  for (const [key, raw] of Object.entries(bag)) {
+    if (key.toUpperCase() !== pieceCodeUpper) continue;
+    return normalizeHandCount(raw);
+  }
+  return 0;
+}
+
 function enforceDroppedPieceConsumed(
+  beforePosition: CanonicalPosition,
   position: CanonicalPosition,
   move: AiMove,
   actorSide: 'player' | 'enemy',
@@ -80,6 +92,8 @@ function enforceDroppedPieceConsumed(
   if (!move.dropPieceCode) return position;
   const side: 'player' | 'enemy' = actorSide;
   const want = move.dropPieceCode.toUpperCase();
+  const beforeHandsRoot = asRecord(beforePosition.hands);
+  const beforeBag = asRecord(side === 'player' ? beforeHandsRoot.player : beforeHandsRoot.enemy);
 
   const handsRoot = asRecord(position.hands);
   const playerRaw = asRecord(handsRoot.player);
@@ -87,6 +101,12 @@ function enforceDroppedPieceConsumed(
   const player = { ...playerRaw };
   const enemy = { ...enemyRaw };
   const bag = side === 'player' ? player : enemy;
+  const beforeCount = handCountByCodeCaseInsensitive(beforeBag, want);
+  const afterCount = handCountByCodeCaseInsensitive(bag, want);
+  // エンジン側で既に打ち駒消費済みなら二重減算しない
+  if (beforeCount <= 0 || afterCount < beforeCount) {
+    return position;
+  }
 
   let matchedKey: string | null = null;
   for (const key of Object.keys(bag)) {
@@ -287,6 +307,40 @@ type CommitGameMoveDeps = {
   mappingService?: PieceMappingService;
 };
 
+function isTransientUpstreamError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('502 bad gateway') ||
+    normalized.includes('503 service unavailable') ||
+    normalized.includes('504 gateway timeout') ||
+    normalized.includes('fetch failed') ||
+    normalized.includes('econnreset') ||
+    normalized.includes('etimedout') ||
+    normalized.includes('socket hang up')
+  );
+}
+
+async function retryOnTransientError<T>(
+  task: () => Promise<T>,
+  retries = 2,
+  delayMs = 120,
+): Promise<T> {
+  let attempt = 0;
+  // 例: retries=2 -> 最大3回試行
+  for (;;) {
+    try {
+      return await task();
+    } catch (error) {
+      if (attempt >= retries || !isTransientUpstreamError(error)) {
+        throw error;
+      }
+      attempt += 1;
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+}
+
 export class CommitGameMoveError extends Error {
   readonly code:
     | 'GAME_NOT_FOUND'
@@ -326,7 +380,7 @@ export function createCommitGameMove(
     const metrics: Record<string, number> = {};
 
     const loadStart = Date.now();
-    const gameState = await deps.loadGameState(input.gameId);
+    const gameState = await retryOnTransientError(() => deps.loadGameState(input.gameId));
     metrics.loadGameStateMs = Date.now() - loadStart;
     if (gameState.game.status !== 'in_progress') {
       throw new CommitGameMoveError('GAME_ALREADY_FINISHED', 'game is already finished');
@@ -357,17 +411,22 @@ export function createCommitGameMove(
     const enrichStart = Date.now();
     const currentPosition =
       input.currentPosition ??
-      (await deps.enrichPosition(input.gameId, gameState.position, expectedMoveNo, mappingService));
+      (await retryOnTransientError(() =>
+        deps.enrichPosition(input.gameId, gameState.position, expectedMoveNo, mappingService),
+      ));
     metrics.enrichPositionMs = Date.now() - enrichStart;
     const normalizedMove = withCapturedPieceCode(currentPosition, input.move, mappingService);
 
     const applyStart = Date.now();
-    const nextPosition = await deps.applyMove({
-      position: currentPosition,
-      selectedMove: normalizedMove,
-    });
+    const nextPosition = await retryOnTransientError(() =>
+      deps.applyMove({
+        position: currentPosition,
+        selectedMove: normalizedMove,
+      }),
+    );
     metrics.applyMoveMs = Date.now() - applyStart;
     const dropConsumedPosition = enforceDroppedPieceConsumed(
+      gameState.position,
       nextPosition,
       normalizedMove,
       input.actorSide,
@@ -388,26 +447,30 @@ export function createCommitGameMove(
     const nextGame = deriveGameStatus(persistedPosition, mappingService);
 
     const persistStart = Date.now();
-    await deps.persistMove({
-      gameId: input.gameId,
-      moveNo: expectedMoveNo,
-      actorSide: input.actorSide,
-      move: normalizedMove,
-      thoughtMs: input.thoughtMs ?? null,
-      position: persistedPosition,
-      game: nextGame,
-    });
+    await retryOnTransientError(() =>
+      deps.persistMove({
+        gameId: input.gameId,
+        moveNo: expectedMoveNo,
+        actorSide: input.actorSide,
+        move: normalizedMove,
+        thoughtMs: input.thoughtMs ?? null,
+        position: persistedPosition,
+        game: nextGame,
+      }),
+    );
     metrics.persistMoveMs = Date.now() - persistStart;
 
     if (input.aiInference) {
       const inferenceLogStart = Date.now();
-      await deps.insertInferenceLog({
-        gameId: input.gameId,
-        moveNo: expectedMoveNo,
-        normalizedConfig: input.aiInference.normalizedConfig,
-        requestPayload: input.aiInference.requestPayload,
-        responsePayload: input.aiInference.responsePayload,
-      });
+      await retryOnTransientError(() =>
+        deps.insertInferenceLog({
+          gameId: input.gameId,
+          moveNo: expectedMoveNo,
+          normalizedConfig: input.aiInference.normalizedConfig,
+          requestPayload: input.aiInference.requestPayload,
+          responsePayload: input.aiInference.responsePayload,
+        }),
+      );
       metrics.insertInferenceLogMs = Date.now() - inferenceLogStart;
     }
 
