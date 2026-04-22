@@ -37,6 +37,8 @@ const ENGINE_ONE_CHAR_SFEN_BY_DISPLAY: Readonly<Record<string, string>> = {
   TIN: 'Z',
   LEAD: '!',
   TREASURE: '$',
+  SAND: '[',
+  WIND: '<',
 };
 
 function normalizeSfenTokenForEngine(entry: PieceMappingEntry): string | null {

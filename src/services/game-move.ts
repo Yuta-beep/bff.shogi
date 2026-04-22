@@ -82,6 +82,32 @@ function handCountByCodeCaseInsensitive(
   return 0;
 }
 
+function sfenTokenForSide(token: string, side: 'player' | 'enemy'): string {
+  if (!token || token.length !== 1) return token;
+  const symbolForEnemy: Readonly<Record<string, string>> = {
+    '$': '%',
+    '!': '?',
+    '&': '*',
+    '(': ')',
+    '#': '~',
+    '@': '`',
+    '^': '_',
+    '[': ']',
+    '<': '>',
+  };
+  const symbolForPlayer: Readonly<Record<string, string>> = Object.fromEntries(
+    Object.entries(symbolForEnemy).map(([player, enemy]) => [enemy, player]),
+  );
+  if (side === 'player') {
+    if (symbolForPlayer[token]) return symbolForPlayer[token];
+    if (symbolForEnemy[token]) return token;
+    return token.toUpperCase();
+  }
+  if (symbolForEnemy[token]) return symbolForEnemy[token];
+  if (symbolForPlayer[token]) return token;
+  return token.toLowerCase();
+}
+
 function enforceDroppedPieceConsumed(
   beforePosition: CanonicalPosition,
   position: CanonicalPosition,
@@ -141,7 +167,7 @@ function enforceDroppedPieceConsumed(
   if (parts.length < 4) {
     return next;
   }
-  const targetToken = side === 'player' ? token.toUpperCase() : token.toLowerCase();
+  const targetToken = sfenTokenForSide(token, side);
   parts[2] = decrementHandsToken(parts[2] ?? '-', targetToken);
   return { ...next, sfen: parts.join(' ') };
 }
@@ -195,7 +221,7 @@ function reconcileStarReturnOwnership(
   if (parts.length < 4) {
     return next;
   }
-  const targetToken = actorSide === 'player' ? token.toUpperCase() : token.toLowerCase();
+  const targetToken = sfenTokenForSide(token, actorSide);
   parts[2] = decrementHandsToken(parts[2] ?? '-', targetToken);
   return { ...next, sfen: parts.join(' ') };
 }
@@ -247,12 +273,8 @@ function reconcileCapturedPieceOwnership(
   if (parts.length < 4) {
     return next;
   }
-  const ownerToken =
-    actorSide === 'player'
-      ? /^[A-Za-z]$/.test(token)
-        ? token.toLowerCase()
-        : token
-      : token.toUpperCase();
+  const ownerSide: 'player' | 'enemy' = actorSide === 'player' ? 'enemy' : 'player';
+  const ownerToken = sfenTokenForSide(token, ownerSide);
   parts[2] = decrementHandsToken(parts[2] ?? '-', ownerToken);
   return { ...next, sfen: parts.join(' ') };
 }

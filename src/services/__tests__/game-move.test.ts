@@ -61,6 +61,14 @@ function buildMappingService(): PieceMappingService {
       isSpecial: true,
       isPromoted: false,
     },
+    {
+      pieceId: 205,
+      sfenCode: 'ZAH',
+      displayChar: 'WIND',
+      canonicalCode: 'wind',
+      isSpecial: true,
+      isPromoted: false,
+    },
   ]);
 }
 
@@ -293,6 +301,60 @@ describe('commitGameMove', () => {
 
     expect(result.position.hands).toEqual({
       player: {},
+      enemy: {},
+    });
+  });
+
+  it('reconciles captured symbol-piece ownership for enemy token pairs', async () => {
+    const commitGameMove = createCommitGameMove({
+      mappingService: buildMappingService(),
+      loadGameState: async () => ({
+        gameId: 'game-wind-capture',
+        position: {
+          sideToMove: 'player',
+          turnNumber: 15,
+          moveCount: 14,
+          sfen: '4k4/9/9/9/9/9/9/9/4K4 b - 15',
+          stateHash: null,
+          boardState: {},
+          hands: { player: {}, enemy: {} },
+        },
+        game: { status: 'in_progress', result: null, winnerSide: null },
+      }),
+      enrichPosition: async (_gameId, position) => ({ ...position, legalMoves: [] }),
+      applyMove: async () => ({
+        sideToMove: 'enemy',
+        turnNumber: 16,
+        moveCount: 15,
+        // enemy 側 token は '>'。捕獲補正でこれを減算できることを検証する。
+        sfen: '4k4/9/9/9/9/9/9/9/4K4 w > 16',
+        stateHash: null,
+        boardState: {},
+        hands: { player: { WIND: 1 }, enemy: { WIND: 1 } },
+      }),
+      persistMove: async () => {},
+      insertInferenceLog: async () => {},
+    });
+
+    const result = await commitGameMove({
+      gameId: 'game-wind-capture',
+      moveNo: 15,
+      actorSide: 'player',
+      move: {
+        fromRow: 4,
+        fromCol: 4,
+        toRow: 3,
+        toCol: 4,
+        pieceCode: 'FU',
+        promote: false,
+        dropPieceCode: null,
+        capturedPieceCode: 'WIND',
+        notation: null,
+      },
+    });
+
+    expect(result.position.hands).toEqual({
+      player: { WIND: 1 },
       enemy: {},
     });
   });
