@@ -85,7 +85,7 @@ function handCountByCodeCaseInsensitive(
 function sfenTokenForSide(token: string, side: 'player' | 'enemy'): string {
   if (!token || token.length !== 1) return token;
   const symbolForEnemy: Readonly<Record<string, string>> = {
-    '$': '%',
+    $: '%',
     '!': '?',
     '&': '*',
     '(': ')',
