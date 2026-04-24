@@ -273,7 +273,7 @@ const MANUAL_SKILL_OVERRIDES = {
       },
     ],
   },
-  '縦横に1マス移動。敵の移動範囲を1ターン縦横1マスに制限する。': {
+  '周囲8マスにいる敵駒の移動範囲を縦横1マスに制限する。': {
     skillType: 'passive',
     targetRule: 'enemy_piece',
     effectSummaryType: 'composite',

@@ -867,7 +867,7 @@
     },
     {
       "id": 26,
-      "skillDesc": "縦横に1マス移動。敵の移動範囲を1ターン縦横1マスに制限する。",
+      "skillDesc": "周囲8マスにいる敵駒の移動範囲を縦横1マスに制限する。",
       "structured": {
         "skillType": "passive",
         "targetRule": "enemy_piece",

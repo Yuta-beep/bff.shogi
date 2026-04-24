@@ -41,6 +41,8 @@ const ENGINE_ONE_CHAR_SFEN_BY_DISPLAY: Readonly<Record<string, string>> = {
   WIND: '<',
   MOSS: '{',
   FISH: ':',
+  CLOUD: '.',
+  RAINBOW: '"',
 };
 
 function normalizeSfenTokenForEngine(entry: PieceMappingEntry): string | null {

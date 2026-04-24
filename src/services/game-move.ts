@@ -96,6 +96,8 @@ function sfenTokenForSide(token: string, side: 'player' | 'enemy'): string {
     '<': '>',
     '{': '}',
     ':': ';',
+    '.': ',',
+    '"': "'",
   };
   const symbolForPlayer: Readonly<Record<string, string>> = Object.fromEntries(
     Object.entries(symbolForEnemy).map(([player, enemy]) => [enemy, player]),
