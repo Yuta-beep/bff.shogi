@@ -486,15 +486,16 @@ export function createCommitGameMove(
     );
     metrics.persistMoveMs = Date.now() - persistStart;
 
-    if (input.aiInference) {
+    const aiInference = input.aiInference;
+    if (aiInference) {
       const inferenceLogStart = Date.now();
       await retryOnTransientError(() =>
         deps.insertInferenceLog({
           gameId: input.gameId,
           moveNo: expectedMoveNo,
-          normalizedConfig: input.aiInference.normalizedConfig,
-          requestPayload: input.aiInference.requestPayload,
-          responsePayload: input.aiInference.responsePayload,
+          normalizedConfig: aiInference.normalizedConfig,
+          requestPayload: aiInference.requestPayload,
+          responsePayload: aiInference.responsePayload,
         }),
       );
       metrics.insertInferenceLogMs = Date.now() - inferenceLogStart;

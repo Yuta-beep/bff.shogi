@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 import { isPublishedNow } from '@/lib/time';
 
 type MoveRule = {
@@ -41,28 +40,6 @@ export async function listPieceCatalog() {
     .select('piece_id,m_stage:stage_id(stage_no)');
 
   if (stagePieceRes.error) throw stagePieceRes.error;
-
-  const storageUrlByAsset = new Map<string, string | null>();
-  const signedUrlTtlSec = 60 * 60;
-  const uniqueAssets = [
-    ...new Set(
-      (piecesRes.data ?? [])
-        .map((row: any) => {
-          const bucket = row.image_bucket as string | null | undefined;
-          const key = row.image_key as string | null | undefined;
-          return bucket && key ? `${bucket}::${key}` : null;
-        })
-        .filter((asset): asset is string => Boolean(asset)),
-    ),
-  ];
-
-  await Promise.all(
-    uniqueAssets.map(async (asset) => {
-      const [bucket, key] = asset.split('::');
-      const imageUrl = await getStorageAssetUrl(bucket ?? null, key ?? null, { signedUrlTtlSec });
-      storageUrlByAsset.set(asset, imageUrl);
-    }),
-  );
 
   const movePatternIds = [
     ...new Set(
@@ -161,10 +138,6 @@ export async function listPieceCatalog() {
         moveCode: pattern?.move_code ?? null,
         char: row.kanji,
         name: row.name,
-        imageSignedUrl:
-          row.image_bucket && row.image_key
-            ? (storageUrlByAsset.get(`${row.image_bucket}::${row.image_key}`) ?? null)
-            : null,
         unlock: unlockStageByPieceId.has(row.piece_id)
           ? `Stage ${unlockStageByPieceId.get(row.piece_id)}`
           : '初期',

@@ -1,6 +1,5 @@
 import { isPublishedNow } from '@/lib/time';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 
 type GachaRow = {
   gacha_id: number;
@@ -78,7 +77,6 @@ export type GachaLobbyBanner = {
   usesGold?: boolean;
   pawnCost: number;
   goldCost: number;
-  imageSignedUrl: string | null;
 };
 
 export type GachaLobbySnapshot = {
@@ -96,7 +94,6 @@ export type RollGachaResult =
         name: string;
         rarity: string;
         description: string;
-        imageSignedUrl: string | null;
       };
       alreadyOwned: boolean;
       pawnCurrency: number;
@@ -197,10 +194,6 @@ function rollRarity(rates: ActiveGacha['rates']): 'N' | 'R' | 'SR' | 'UR' | 'SSR
   return pickWeightedRandom(pool, (x) => x.rate).rarity;
 }
 
-async function createSignedUrl(bucket: string | null, key: string | null): Promise<string | null> {
-  return getStorageAssetUrl(bucket, key, { signedUrlTtlSec: 60 * 60 });
-}
-
 async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {
   const { data: gachaRows, error: gachaError } = await supabaseAdmin
     .schema('master')
@@ -292,7 +285,6 @@ export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot>
 
   const banners: GachaLobbyBanner[] = [];
   for (const gacha of gachas) {
-    const imageSignedUrl = await createSignedUrl(gacha.imageBucket, gacha.imageKey);
     banners.push({
       key: gacha.gachaCode,
       name: gacha.gachaName,
@@ -309,7 +301,6 @@ export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot>
       usesGold: gacha.costs.gold > 0,
       pawnCost: gacha.costs.pawn,
       goldCost: gacha.costs.gold,
-      imageSignedUrl,
     });
   }
 
@@ -424,10 +415,9 @@ export async function rollGacha(userId: string, gachaCode: string): Promise<Roll
   const pool = candidates.length > 0 ? candidates : gacha.pieces;
   const picked = pickWeightedRandom(pool, (item) => item.weight);
 
-  const [{ alreadyOwned }, wallet, imageSignedUrl] = await Promise.all([
+  const [{ alreadyOwned }, wallet] = await Promise.all([
     grantOwnedPiece(userId, picked.pieceId),
     getPlayerWallet(userId),
-    createSignedUrl(picked.imageBucket, picked.imageKey),
   ]);
 
   return {
@@ -437,7 +427,6 @@ export async function rollGacha(userId: string, gachaCode: string): Promise<Roll
       name: picked.name,
       rarity: picked.rarity,
       description: picked.description ?? `${picked.name}を獲得しました。`,
-      imageSignedUrl,
     },
     alreadyOwned,
     pawnCurrency: wallet.pawnCurrency,

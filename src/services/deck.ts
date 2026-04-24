@@ -1,11 +1,9 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 
 export type OwnedPieceRow = {
   pieceId: number;
   char: string;
   name: string;
-  imageSignedUrl: string | null;
   quantity: number;
   acquiredAt: string;
   source: string;
@@ -17,7 +15,6 @@ export type DeckPlacement = {
   pieceId: number;
   char: string;
   name: string;
-  imageSignedUrl: string | null;
 };
 
 export type DeckRow = {
@@ -98,25 +95,12 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
     }
   }
 
-  const storageUrlByAsset = new Map<string, string | null>();
-  const signedUrlTtlSec = 60 * 60;
-  for (const meta of pieceById.values()) {
-    if (!meta.imageBucket || !meta.imageKey) continue;
-    const assetKey = `${meta.imageBucket}::${meta.imageKey}`;
-    if (storageUrlByAsset.has(assetKey)) continue;
-    const imageUrl = await getStorageAssetUrl(meta.imageBucket, meta.imageKey, { signedUrlTtlSec });
-    storageUrlByAsset.set(assetKey, imageUrl);
-  }
-
   const ownedPieces: OwnedPieceRow[] = ownedRows.map((row) => {
     const meta = pieceById.get(row.piece_id);
-    const assetKey =
-      meta?.imageBucket && meta?.imageKey ? `${meta.imageBucket}::${meta.imageKey}` : null;
     return {
       pieceId: row.piece_id,
       char: meta?.kanji ?? '',
       name: meta?.name ?? '',
-      imageSignedUrl: assetKey ? (storageUrlByAsset.get(assetKey) ?? null) : null,
       quantity: row.quantity ?? 1,
       acquiredAt: row.acquired_at,
       source: row.source,
@@ -136,10 +120,6 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
         pieceId: p.piece_id,
         char: meta?.kanji ?? '',
         name: meta?.name ?? '',
-        imageSignedUrl:
-          meta?.imageBucket && meta?.imageKey
-            ? (storageUrlByAsset.get(`${meta.imageBucket}::${meta.imageKey}`) ?? null)
-            : null,
       };
     }),
   }));

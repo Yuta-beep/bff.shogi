@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 import { isPublishedNow } from '@/lib/time';
 
 export type StageRow = {
@@ -171,31 +170,11 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
 
   const rewards = rewardRes.error ? [] : (rewardRes.data ?? []);
 
-  const storageUrlByAsset = new Map<string, string | null>();
-  const signedUrlTtlSec = 60 * 60;
-
-  for (const row of mergedPlacementRows) {
-    const piece = toPieceRow(row);
-    const bucket = piece?.image_bucket as string | null | undefined;
-    const key = piece?.image_key as string | null | undefined;
-    if (!bucket || !key) continue;
-
-    const cacheKey = `${bucket}::${key}`;
-    if (storageUrlByAsset.has(cacheKey)) continue;
-
-    const imageUrl = await getStorageAssetUrl(bucket, key, { signedUrlTtlSec });
-    storageUrlByAsset.set(cacheKey, imageUrl);
-  }
-
   return {
     board: {
       size: 9,
       placements: mergedPlacementRows.map((row: any) => {
         const piece = toPieceRow(row);
-        const assetKey =
-          piece?.image_bucket && piece?.image_key
-            ? `${piece.image_bucket}::${piece.image_key}`
-            : null;
         return {
           side: row.side,
           row: row.row_no,
@@ -207,7 +186,6 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
             name: piece?.name ?? null,
             imageBucket: piece?.image_bucket ?? null,
             imageKey: piece?.image_key ?? null,
-            imageSignedUrl: assetKey ? (storageUrlByAsset.get(assetKey) ?? null) : null,
             movePatternId: piece?.move_pattern_id ?? null,
             skillId: piece?.skill_id ?? null,
           },

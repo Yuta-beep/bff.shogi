@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getStorageAssetUrl } from '@/lib/storage-asset-url';
 import { isPublishedNow } from '@/lib/time';
 
 type StageRow = {
@@ -97,30 +96,11 @@ export async function getStageBattleSetup(stageId: number) {
 
   const rewards = rewardRes.error ? [] : (rewardRes.data ?? []);
 
-  const storageUrlByAsset = new Map<string, string | null>();
-
-  for (const row of placementRes.data ?? []) {
-    const piece = toPieceRow(row);
-    const bucket = piece?.image_bucket as string | null | undefined;
-    const key = piece?.image_key as string | null | undefined;
-    if (!bucket || !key) continue;
-
-    const cacheKey = `${bucket}::${key}`;
-    if (storageUrlByAsset.has(cacheKey)) continue;
-
-    const imageUrl = await getStorageAssetUrl(bucket, key);
-    storageUrlByAsset.set(cacheKey, imageUrl);
-  }
-
   return {
     board: {
       size: 9,
       placements: (placementRes.data ?? []).map((row: any) => {
         const piece = toPieceRow(row);
-        const assetKey =
-          piece?.image_bucket && piece?.image_key
-            ? `${piece.image_bucket}::${piece.image_key}`
-            : null;
         return {
           side: row.side,
           row: row.row_no,
@@ -132,7 +112,6 @@ export async function getStageBattleSetup(stageId: number) {
             name: piece?.name ?? null,
             imageBucket: piece?.image_bucket ?? null,
             imageKey: piece?.image_key ?? null,
-            imageSignedUrl: assetKey ? (storageUrlByAsset.get(assetKey) ?? null) : null,
             movePatternId: piece?.move_pattern_id ?? null,
             skillId: piece?.skill_id ?? null,
           },
@@ -198,20 +177,6 @@ export async function listPieceCatalog() {
     .select('piece_id,m_stage:stage_id(stage_no)');
 
   if (stagePieceRes.error) throw stagePieceRes.error;
-
-  const storageUrlByAsset = new Map<string, string | null>();
-
-  for (const row of piecesRes.data ?? []) {
-    const bucket = (row as any).image_bucket as string | null | undefined;
-    const key = (row as any).image_key as string | null | undefined;
-    if (!bucket || !key) continue;
-
-    const cacheKey = `${bucket}::${key}`;
-    if (storageUrlByAsset.has(cacheKey)) continue;
-
-    const imageUrl = await getStorageAssetUrl(bucket, key);
-    storageUrlByAsset.set(cacheKey, imageUrl);
-  }
 
   const movePatternIds = [
     ...new Set(
@@ -279,10 +244,6 @@ export async function listPieceCatalog() {
         moveCode: pattern?.move_code ?? null,
         char: row.kanji,
         name: row.name,
-        imageSignedUrl:
-          row.image_bucket && row.image_key
-            ? (storageUrlByAsset.get(`${row.image_bucket}::${row.image_key}`) ?? null)
-            : null,
         unlock: unlockStageByPieceId.has(row.piece_id)
           ? `Stage ${unlockStageByPieceId.get(row.piece_id)}`
           : '初期',
