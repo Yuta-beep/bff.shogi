@@ -8,6 +8,15 @@ type PieceSkillRow = {
   kanji: string | null;
 };
 
+const DISPLAY_TO_KANJI_FALLBACK: Readonly<Record<string, string>> = {
+  POISON: '毒',
+  SWAMP: '沼',
+  RAINBOW: '虹',
+  CLOUD: '雲',
+  OU: '玉',
+  KING: '玉',
+};
+
 type SkillMetaRow = {
   skill_id: number;
   skill_desc: string;
@@ -216,25 +225,46 @@ export async function attachSkillEffectsToAiRequestWithClient(
   const pieceIdToDisplayChar = new Map(
     [...displayCharToPieceId.entries()].map(([displayChar, id]) => [id, displayChar]),
   );
-
-  if (pieceIds.length === 0) {
-    return withSkillPayload(input, {
-      registry: null,
-      definitions: null,
-      legacyEffects: [],
-    });
+  const unresolvedDisplayChars = [...pieceCodes].filter(
+    (code) => !displayCharToPieceId.has(code),
+  );
+  const fallbackKanji = new Set<string>();
+  for (const code of unresolvedDisplayChars) {
+    const mapped = DISPLAY_TO_KANJI_FALLBACK[code.toUpperCase()];
+    if (mapped) fallbackKanji.add(mapped);
+    // すでに漢字で入っているケース（例: 毒, 沼）も拾う
+    fallbackKanji.add(code);
   }
 
-  const { data: pieceRows, error: pieceError } = await client
-    .schema('master')
-    .from('m_piece')
-    .select('piece_id,skill_id,kanji')
-    .eq('is_active', true)
-    .in('piece_id', pieceIds);
-  if (pieceError) throw pieceError;
+  const pieceRowsByPieceId = new Map<number, PieceSkillRow>();
+  if (pieceIds.length > 0) {
+    const { data: byIdRows, error: byIdError } = await client
+      .schema('master')
+      .from('m_piece')
+      .select('piece_id,skill_id,kanji')
+      .eq('is_active', true)
+      .in('piece_id', pieceIds);
+    if (byIdError) throw byIdError;
+    for (const row of (byIdRows ?? []) as PieceSkillRow[]) {
+      pieceRowsByPieceId.set(row.piece_id, row);
+    }
+  }
+  if (fallbackKanji.size > 0) {
+    const { data: byKanjiRows, error: byKanjiError } = await client
+      .schema('master')
+      .from('m_piece')
+      .select('piece_id,skill_id,kanji')
+      .eq('is_active', true)
+      .in('kanji', Array.from(fallbackKanji));
+    if (byKanjiError) throw byKanjiError;
+    for (const row of (byKanjiRows ?? []) as PieceSkillRow[]) {
+      pieceRowsByPieceId.set(row.piece_id, row);
+    }
+  }
+  const pieceRows = Array.from(pieceRowsByPieceId.values());
 
   const skillToPieceCodes = new Map<number, string[]>();
-  for (const row of (pieceRows ?? []) as PieceSkillRow[]) {
+  for (const row of pieceRows) {
     if (!row.skill_id) continue;
     const list = skillToPieceCodes.get(row.skill_id) ?? [];
     const aliases = [pieceIdToDisplayChar.get(row.piece_id), row.kanji].filter(
@@ -753,12 +783,52 @@ export function collectPieceCodesForSkillLookup(
   for (const code of extractPieceCodesFromSfen(position.sfen ?? null, mappingService))
     set.add(code);
   for (const code of extractPieceCodesFromHands(position.hands)) set.add(code);
+  for (const code of extractPieceCodesFromBoardState(position.boardState, mappingService)) set.add(code);
   for (const mv of position.legalMoves) {
     if (mv.pieceCode) set.add(mv.pieceCode.toUpperCase());
     if (mv.dropPieceCode) set.add(mv.dropPieceCode.toUpperCase());
   }
 
   return set;
+}
+
+function extractPieceCodesFromBoardState(
+  boardState: unknown,
+  mappingService: PieceMappingService,
+): Set<string> {
+  const out = new Set<string>();
+  if (!boardState || typeof boardState !== 'object') return out;
+  const state = boardState as Record<string, unknown>;
+  const rawList =
+    (Array.isArray(state.pieces) && state.pieces) ||
+    (Array.isArray(state.placements) && state.placements) ||
+    (Array.isArray(state.boardPieces) && state.boardPieces) ||
+    (Array.isArray(state.board_pieces) && state.board_pieces) ||
+    [];
+
+  for (const raw of rawList) {
+    if (!raw || typeof raw !== 'object') continue;
+    const entry = raw as Record<string, unknown>;
+    const nested =
+      entry.piece && typeof entry.piece === 'object'
+        ? (entry.piece as Record<string, unknown>)
+        : entry;
+
+    const pieceCode = nested.pieceCode ?? nested.piece_code ?? nested.code;
+    if (typeof pieceCode === 'string' && pieceCode.trim().length > 0) {
+      out.add(pieceCode.trim().toUpperCase());
+    }
+
+    const char = nested.char ?? entry.char;
+    if (typeof char === 'string' && char.trim().length > 0) {
+      const normalizedChar = char.trim();
+      out.add(normalizedChar);
+      const maybeDisplay = mappingService.sfenTokenToDisplayChar(normalizedChar);
+      if (maybeDisplay) out.add(maybeDisplay.toUpperCase());
+    }
+  }
+
+  return out;
 }
 
 function extractPieceCodesFromHands(hands: unknown): Set<string> {

@@ -73,6 +73,8 @@ const EXPLICIT_MAPPINGS: readonly ExplicitMapping[] = [
   { kanji: '星', displayChar: 'HOS', sfenCode: 'W', canonicalCode: 'star', isSpecial: true },
   { kanji: '闇', displayChar: 'YAM', sfenCode: 'X', canonicalCode: 'dark', isSpecial: true },
   { kanji: '魔', displayChar: 'MAK', sfenCode: 'Y', canonicalCode: 'demon', isSpecial: true },
+  { kanji: '毒', displayChar: 'POISON', sfenCode: '=', canonicalCode: 'poison', isSpecial: true },
+  { kanji: '沼', displayChar: 'SWAMP', sfenCode: '|', canonicalCode: 'swamp', isSpecial: true },
 ] as const;
 
 const explicitByKanji = new Map(EXPLICIT_MAPPINGS.map((entry) => [entry.kanji, entry]));
