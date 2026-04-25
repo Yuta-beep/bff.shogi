@@ -1,4 +1,5 @@
-import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 
 import { extractPieceCodesFromSfen } from '@/services/ai-skill-effects';
@@ -34,19 +35,41 @@ function buildBoundaryMappingService(): PieceMappingService {
   ]);
 }
 
-function grepOutput(args: string[]): string {
-  try {
-    return execFileSync('rg', args, {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
-  } catch (error: any) {
-    if (error.status === 1) {
-      return '';
+function collectBackendTsFiles(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === '__tests__') continue;
+      files.push(...collectBackendTsFiles(fullPath));
+      continue;
     }
-    throw error;
+    if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+    files.push(fullPath);
   }
+
+  return files;
+}
+
+function findLegacySfenConversionPatterns(): string[] {
+  const matches: string[] = [];
+  for (const file of collectBackendTsFiles(join(process.cwd(), 'src'))) {
+    const content = readFileSync(file, 'utf8');
+    const hasLegacyPattern = content.split('\n').some((line) => {
+      const trimmed = line.trim();
+      return (
+        trimmed.includes('_hardcodedSfenCharToDisplayChar') ||
+        /switch.*piece_code/.test(trimmed) ||
+        /if.*piece_code.*===/.test(trimmed)
+      );
+    });
+    if (hasLegacyPattern) {
+      matches.push(file);
+    }
+  }
+  return matches;
 }
 
 describe('Backend dependency boundary', () => {
@@ -109,15 +132,6 @@ describe('Backend dependency boundary', () => {
   });
 
   it('has no legacy hardcoded SFEN conversion helper in backend sources', () => {
-    const output = grepOutput([
-      '-n',
-      '_hardcodedSfenCharToDisplayChar|switch.*piece_code|if.*piece_code.*===',
-      'src',
-      '--glob',
-      '*.ts',
-      '--glob',
-      '!**/__tests__/**',
-    ]);
-    expect(output).toBe('');
+    expect(findLegacySfenConversionPatterns()).toEqual([]);
   });
 });
