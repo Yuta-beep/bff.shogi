@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'bun:test';
 
 import { extractPieceCodesFromSfen } from '@/services/ai-skill-effects';
@@ -34,9 +34,9 @@ function buildBoundaryMappingService(): PieceMappingService {
   ]);
 }
 
-function grepOutput(command: string): string {
+function grepOutput(args: string[]): string {
   try {
-    return execSync(command, {
+    return execFileSync('rg', args, {
       cwd: process.cwd(),
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -109,9 +109,15 @@ describe('Backend dependency boundary', () => {
   });
 
   it('has no legacy hardcoded SFEN conversion helper in backend sources', () => {
-    const output = grepOutput(
-      "rg -n \"_hardcodedSfenCharToDisplayChar|switch.*piece_code|if.*piece_code.*===\" src --glob '*.ts' --glob '!**/__tests__/**'",
-    );
+    const output = grepOutput([
+      '-n',
+      '_hardcodedSfenCharToDisplayChar|switch.*piece_code|if.*piece_code.*===',
+      'src',
+      '--glob',
+      '*.ts',
+      '--glob',
+      '!**/__tests__/**',
+    ]);
     expect(output).toBe('');
   });
 });
