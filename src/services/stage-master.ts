@@ -17,33 +17,54 @@ export type StageRow = {
   unpublished_at: string | null;
 };
 
-export async function listPublishedStages() {
-  const { data, error } = await supabaseAdmin
-    .schema('master')
-    .from('m_stage')
-    .select(
-      'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
-    )
-    .order('stage_no', { ascending: true });
+const STAGE_MASTER_TTL_MS = 60_000;
 
-  if (error) throw error;
-  return ((data ?? []) as StageRow[]).filter((row) => isPublishedNow(row));
+let cachedStageRows: StageRow[] | null = null;
+let cachedStageRowsAt = 0;
+let stageRowsInFlight: Promise<StageRow[]> | null = null;
+
+async function loadStageRows(force = false): Promise<StageRow[]> {
+  const now = Date.now();
+  if (!force && cachedStageRows && now - cachedStageRowsAt < STAGE_MASTER_TTL_MS) {
+    return cachedStageRows;
+  }
+  if (stageRowsInFlight) return stageRowsInFlight;
+
+  stageRowsInFlight = (async () => {
+    const { data, error } = await supabaseAdmin
+      .schema('master')
+      .from('m_stage')
+      .select(
+        'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
+      )
+      .order('stage_no', { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as StageRow[];
+    cachedStageRows = rows;
+    cachedStageRowsAt = Date.now();
+    return rows;
+  })().finally(() => {
+    stageRowsInFlight = null;
+  });
+
+  return stageRowsInFlight;
+}
+
+export async function listPublishedStages() {
+  const rows = await loadStageRows();
+  return rows.filter((row) => isPublishedNow(row));
 }
 
 export async function getStageByNo(stageNo: number) {
-  const { data, error } = await supabaseAdmin
-    .schema('master')
-    .from('m_stage')
-    .select(
-      'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
-    )
-    .eq('stage_no', stageNo)
-    .limit(1)
-    .maybeSingle();
+  const rows = await loadStageRows();
+  return rows.find((row) => row.stage_no === stageNo) ?? null;
+}
 
-  if (error) throw error;
-  if (!data) return null;
-  return data as StageRow;
+export async function getStageNoByIdMap(): Promise<Map<number, number>> {
+  const rows = await loadStageRows();
+  return new Map(rows.map((row) => [row.stage_id, row.stage_no]));
 }
 
 export async function getStageBattleSetup(stageId: number, playerId?: string | null) {
@@ -59,7 +80,7 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
     return row?.m_piece ?? null;
   };
 
-  const placementRes = await supabaseAdmin
+  const placementPromise = supabaseAdmin
     .schema('master')
     .from('m_stage_initial_placement')
     .select(
@@ -70,70 +91,94 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
     .order('row_no', { ascending: true })
     .order('col_no', { ascending: true });
 
+  const rosterPromise = supabaseAdmin
+    .schema('master')
+    .from('m_stage_piece')
+    .select('role,weight,piece_id,m_piece:piece_id(piece_code,kanji,name)')
+    .eq('stage_id', stageId)
+    .order('role', { ascending: true });
+
+  const rewardPromise = supabaseAdmin
+    .schema('master')
+    .from('m_stage_reward')
+    .select(
+      'reward_timing,quantity,drop_rate,sort_order,m_reward:reward_id(reward_code,reward_type,reward_name,item_code,piece_id)',
+    )
+    .eq('stage_id', stageId)
+    .order('sort_order', { ascending: true });
+
+  const deckPromise = playerId
+    ? supabaseAdmin
+        .from('player_decks')
+        .select('deck_id,name,player_deck_placements(row_no,col_no,piece_id)')
+        .eq('player_id', playerId)
+        .order('deck_id', { ascending: true })
+    : Promise.resolve(null);
+
+  const [placementRes, rosterRes, rewardRes, deckRes] = await Promise.all([
+    placementPromise,
+    rosterPromise,
+    rewardPromise,
+    deckPromise,
+  ]);
+
   if (placementRes.error) throw placementRes.error;
+  if (rosterRes.error) throw rosterRes.error;
 
   const stagePlacementRows = (placementRes.data ?? []) as any[];
   let playerPlacementRowsFromDeck: any[] = [];
 
-  if (playerId) {
+  if (deckRes && !deckRes.error) {
     try {
-      const deckRes = await supabaseAdmin
-        .from('player_decks')
-        .select('deck_id,name,player_deck_placements(row_no,col_no,piece_id)')
-        .eq('player_id', playerId)
-        .order('deck_id', { ascending: true });
+      const deckList = (deckRes.data ?? []) as Array<{
+        deck_id: number;
+        name: string;
+        player_deck_placements?: Array<{ row_no: number; col_no: number; piece_id: number }>;
+      }>;
+      const targetDeck =
+        deckList.find(
+          (deck) => deck.name === 'マイデッキ' && (deck.player_deck_placements?.length ?? 0) > 0,
+        ) ?? deckList.find((deck) => (deck.player_deck_placements?.length ?? 0) > 0);
 
-      if (!deckRes.error) {
-        const deckList = (deckRes.data ?? []) as Array<{
-          deck_id: number;
-          name: string;
-          player_deck_placements?: Array<{ row_no: number; col_no: number; piece_id: number }>;
-        }>;
-        const targetDeck =
-          deckList.find(
-            (deck) => deck.name === 'マイデッキ' && (deck.player_deck_placements?.length ?? 0) > 0,
-          ) ?? deckList.find((deck) => (deck.player_deck_placements?.length ?? 0) > 0);
+      if (targetDeck?.player_deck_placements && targetDeck.player_deck_placements.length > 0) {
+        const pieceIds = [
+          ...new Set(
+            targetDeck.player_deck_placements
+              .map((p) => p.piece_id)
+              .filter((id): id is number => typeof id === 'number'),
+          ),
+        ];
+        if (pieceIds.length > 0) {
+          const pieceRes = await supabaseAdmin
+            .schema('master')
+            .from('m_piece')
+            .select(
+              'piece_id,piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key',
+            )
+            .in('piece_id', pieceIds);
 
-        if (targetDeck?.player_deck_placements && targetDeck.player_deck_placements.length > 0) {
-          const pieceIds = [
-            ...new Set(
-              targetDeck.player_deck_placements
-                .map((p) => p.piece_id)
-                .filter((id): id is number => typeof id === 'number'),
-            ),
-          ];
-          if (pieceIds.length > 0) {
-            const pieceRes = await supabaseAdmin
-              .schema('master')
-              .from('m_piece')
-              .select(
-                'piece_id,piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key',
-              )
-              .in('piece_id', pieceIds);
-
-            if (!pieceRes.error) {
-              const pieceById = new Map<number, any>(
-                (pieceRes.data ?? []).map((piece: any) => [piece.piece_id, piece]),
-              );
-              playerPlacementRowsFromDeck = targetDeck.player_deck_placements
-                .map((placement) => {
-                  const piece = pieceById.get(placement.piece_id);
-                  if (!piece) return null;
-                  const rowNo = Number(placement.row_no);
-                  const colNo = Number(placement.col_no);
-                  if (!Number.isInteger(rowNo) || !Number.isInteger(colNo)) {
-                    return null;
-                  }
-                  return {
-                    side: 'player',
-                    row_no: toBoardRowFromDeck(rowNo),
-                    col_no: colNo,
-                    piece_id: placement.piece_id,
-                    m_piece: piece,
-                  };
-                })
-                .filter((row): row is any => row !== null);
-            }
+          if (!pieceRes.error) {
+            const pieceById = new Map<number, any>(
+              (pieceRes.data ?? []).map((piece: any) => [piece.piece_id, piece]),
+            );
+            playerPlacementRowsFromDeck = targetDeck.player_deck_placements
+              .map((placement) => {
+                const piece = pieceById.get(placement.piece_id);
+                if (!piece) return null;
+                const rowNo = Number(placement.row_no);
+                const colNo = Number(placement.col_no);
+                if (!Number.isInteger(rowNo) || !Number.isInteger(colNo)) {
+                  return null;
+                }
+                return {
+                  side: 'player',
+                  row_no: toBoardRowFromDeck(rowNo),
+                  col_no: colNo,
+                  piece_id: placement.piece_id,
+                  m_piece: piece,
+                };
+              })
+              .filter((row): row is any => row !== null);
           }
         }
       }
@@ -149,24 +194,6 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
           ...playerPlacementRowsFromDeck,
         ]
       : stagePlacementRows;
-
-  const rosterRes = await supabaseAdmin
-    .schema('master')
-    .from('m_stage_piece')
-    .select('role,weight,piece_id,m_piece:piece_id(piece_code,kanji,name)')
-    .eq('stage_id', stageId)
-    .order('role', { ascending: true });
-
-  if (rosterRes.error) throw rosterRes.error;
-
-  const rewardRes = await supabaseAdmin
-    .schema('master')
-    .from('m_stage_reward')
-    .select(
-      'reward_timing,quantity,drop_rate,sort_order,m_reward:reward_id(reward_code,reward_type,reward_name,item_code,piece_id)',
-    )
-    .eq('stage_id', stageId)
-    .order('sort_order', { ascending: true });
 
   const rewards = rewardRes.error ? [] : (rewardRes.data ?? []);
 

@@ -7,7 +7,30 @@ type MoveRule = {
   params: Record<string, unknown>;
 };
 
+const PIECE_CATALOG_TTL_MS = 60_000;
+
+let cachedPieceCatalog: Awaited<ReturnType<typeof buildPieceCatalog>> | null = null;
+let cachedPieceCatalogAt = 0;
+let pieceCatalogInFlight: Promise<Awaited<ReturnType<typeof buildPieceCatalog>>> | null = null;
+
 export async function listPieceCatalog() {
+  const now = Date.now();
+  if (cachedPieceCatalog && now - cachedPieceCatalogAt < PIECE_CATALOG_TTL_MS) {
+    return cachedPieceCatalog;
+  }
+  if (pieceCatalogInFlight) return pieceCatalogInFlight;
+
+  pieceCatalogInFlight = buildPieceCatalog().finally(() => {
+    pieceCatalogInFlight = null;
+  });
+
+  const catalog = await pieceCatalogInFlight;
+  cachedPieceCatalog = catalog;
+  cachedPieceCatalogAt = Date.now();
+  return catalog;
+}
+
+async function buildPieceCatalog() {
   const fetchPieces = async (
     select: string,
   ): Promise<{ data: any[] | null; error: { message?: string } | null }> =>

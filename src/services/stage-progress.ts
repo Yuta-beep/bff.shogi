@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getStageNoByIdMap } from '@/services/stage-master';
 
 export async function listClearedStageNos(userId: string): Promise<number[]> {
   const { data: clears, error: clearsError } = await supabaseAdmin
@@ -16,26 +17,7 @@ export async function listClearedStageNos(userId: string): Promise<number[]> {
     return [];
   }
 
-  const { data: stages, error: stagesError } = await supabaseAdmin
-    .schema('master')
-    .from('m_stage')
-    .select('stage_id,stage_no')
-    .in('stage_id', stageIds);
-
-  if (stagesError) throw stagesError;
-
-  const stageNoById = new Map<number, number>(
-    (stages ?? [])
-      .map((row) => {
-        const stageId = row.stage_id;
-        const stageNo = row.stage_no;
-        if (typeof stageId !== 'number' || typeof stageNo !== 'number') {
-          return null;
-        }
-        return [stageId, stageNo] as const;
-      })
-      .filter((entry): entry is readonly [number, number] => entry !== null),
-  );
+  const stageNoById = await getStageNoByIdMap();
 
   return stageIds
     .map((stageId) => stageNoById.get(stageId) ?? null)
