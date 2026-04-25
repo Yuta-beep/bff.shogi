@@ -43,10 +43,13 @@ Optional value:
 
 ```bash
 cd infra/terraform
-terraform init
+terraform init -migrate-state
 terraform plan
 terraform apply
 ```
+
+State is stored in S3 at `basi-magic-shogi-terraform-state-apne1` with server-side encryption,
+versioning, public-access block, and S3 lockfile enabled.
 
 ## GitHub Actions CD
 
