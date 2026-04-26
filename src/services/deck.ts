@@ -1,5 +1,23 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+/** マスタの kanji が空・誤字でも、deck_builder.html 準拠の配置ルール用に一字を揃える */
+function deckSnapshotCharFromMeta(meta: {
+  kanji: string;
+  pieceCode: string;
+  mappingDisplayChar: string;
+  mappingCanonical: string;
+}): string {
+  const code = (meta.pieceCode ?? '').trim().toUpperCase();
+  if (code === 'MAK' || code === 'DEMON') return '魔';
+  if (code === 'YAM' || code === 'DARK') return '闇';
+  const disp = (meta.mappingDisplayChar ?? '').trim().toUpperCase();
+  const canon = (meta.mappingCanonical ?? '').trim().toLowerCase();
+  if (disp === 'MAK' || canon === 'demon') return '魔';
+  if (disp === 'YAM' || canon === 'dark') return '闇';
+  if (disp === 'HIK' || canon === 'light') return '光';
+  return (meta.kanji ?? '').trim();
+}
+
 export type OwnedPieceRow = {
   pieceId: number;
   char: string;
@@ -74,20 +92,53 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
 
   const pieceById = new Map<
     number,
-    { kanji: string; name: string; imageBucket: string | null; imageKey: string | null }
+    {
+      kanji: string;
+      pieceCode: string;
+      mappingDisplayChar: string;
+      mappingCanonical: string;
+      name: string;
+      imageBucket: string | null;
+      imageKey: string | null;
+    }
   >();
   if (pieceIds.size > 0) {
+    const ids = Array.from(pieceIds);
     const { data: pieceRows, error: pieceError } = await supabaseAdmin
       .schema('master')
       .from('m_piece')
-      .select('piece_id, kanji, name, image_bucket, image_key')
-      .in('piece_id', Array.from(pieceIds));
+      .select('piece_id, piece_code, kanji, name, image_bucket, image_key')
+      .in('piece_id', ids);
 
     if (pieceError) throw pieceError;
 
+    const { data: mappingRows, error: mappingError } = await supabaseAdmin
+      .schema('master')
+      .from('m_piece_mapping')
+      .select('piece_id, display_char, canonical_piece_code')
+      .in('piece_id', ids);
+
+    if (mappingError) throw mappingError;
+
+    const mappingByPieceId = new Map<
+      number,
+      { displayChar: string; canonicalPieceCode: string }
+    >();
+    for (const row of mappingRows ?? []) {
+      mappingByPieceId.set(row.piece_id as number, {
+        displayChar: (row.display_char as string) ?? '',
+        canonicalPieceCode: (row.canonical_piece_code as string) ?? '',
+      });
+    }
+
     for (const piece of pieceRows ?? []) {
-      pieceById.set(piece.piece_id as number, {
+      const pid = piece.piece_id as number;
+      const mapRow = mappingByPieceId.get(pid);
+      pieceById.set(pid, {
         kanji: (piece.kanji as string) ?? '',
+        pieceCode: (piece.piece_code as string) ?? '',
+        mappingDisplayChar: mapRow?.displayChar ?? '',
+        mappingCanonical: mapRow?.canonicalPieceCode ?? '',
         name: (piece.name as string) ?? '',
         imageBucket: (piece.image_bucket as string | null) ?? null,
         imageKey: (piece.image_key as string | null) ?? null,
@@ -99,7 +150,7 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
     const meta = pieceById.get(row.piece_id);
     return {
       pieceId: row.piece_id,
-      char: meta?.kanji ?? '',
+      char: meta ? deckSnapshotCharFromMeta(meta) : '',
       name: meta?.name ?? '',
       quantity: row.quantity ?? 1,
       acquiredAt: row.acquired_at,
@@ -118,7 +169,7 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
         rowNo: p.row_no,
         colNo: p.col_no,
         pieceId: p.piece_id,
-        char: meta?.kanji ?? '',
+        char: meta ? deckSnapshotCharFromMeta(meta) : '',
         name: meta?.name ?? '',
       };
     }),

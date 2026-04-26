@@ -13,9 +13,24 @@ const DISPLAY_TO_KANJI_FALLBACK: Readonly<Record<string, string>> = {
   SWAMP: '沼',
   RAINBOW: '虹',
   CLOUD: '雲',
+  ENN: '炎',
+  FIRE: '炎',
   OU: '玉',
   KING: '玉',
 };
+
+function normalizePieceLookupCode(raw: string): string {
+  const upper = raw.trim().toUpperCase();
+  if (!upper) return upper;
+  if (upper.startsWith('PIECE_SHOGI_')) return upper.slice('PIECE_SHOGI_'.length);
+  if (upper.startsWith('PIECE_')) return upper.slice('PIECE_'.length);
+  return upper;
+}
+
+function isFlamePieceAlias(raw: string): boolean {
+  const normalized = normalizePieceLookupCode(raw);
+  return normalized === 'ENN' || normalized === 'FIRE' || normalized === 'FLAME' || raw === '炎';
+}
 
 type SkillMetaRow = {
   skill_id: number;
@@ -230,10 +245,14 @@ export async function attachSkillEffectsToAiRequestWithClient(
   );
   const fallbackKanji = new Set<string>();
   for (const code of unresolvedDisplayChars) {
-    const mapped = DISPLAY_TO_KANJI_FALLBACK[code.toUpperCase()];
+    const normalizedCode = normalizePieceLookupCode(code);
+    const mapped =
+      DISPLAY_TO_KANJI_FALLBACK[code.toUpperCase()] ??
+      DISPLAY_TO_KANJI_FALLBACK[normalizedCode];
     if (mapped) fallbackKanji.add(mapped);
     // すでに漢字で入っているケース（例: 毒, 沼）も拾う
     fallbackKanji.add(code);
+    if (normalizedCode) fallbackKanji.add(normalizedCode);
   }
 
   const pieceRowsByPieceId = new Map<number, PieceSkillRow>();
@@ -446,11 +465,20 @@ function synthesizeLegacyV2Definitions(
     }
     const effects: SkillEffectDocument[] = legacy.map((row, index) => {
       const params: Record<string, unknown> = { ...(row.params_json ?? {}) };
+      const skillText = `${meta?.skill_desc ?? ''} ${row.value_text ?? ''}`;
       if (row.effect_type === 'forced_move' && params.movementRule == null) {
         params.movementRule = 'push_away';
       }
       if (row.effect_type === 'apply_status' && params.statusType == null) {
         params.statusType = row.value_text ?? 'stun';
+      }
+      if (
+        row.effect_type === 'remove_piece' &&
+        row.target_rule === 'adjacent_area' &&
+        skillText.includes('ランダム') &&
+        params.randomOne == null
+      ) {
+        params.randomOne = true;
       }
       if (params.durationTurns == null && typeof row.duration_turns === 'number') {
         params.durationTurns = row.duration_turns;
@@ -461,7 +489,10 @@ function synthesizeLegacyV2Definitions(
         type: row.effect_type,
         target: {
           group: 'adjacent',
-          selector: row.target_rule,
+          selector:
+            row.effect_type === 'remove_piece' && row.target_rule === 'adjacent_area'
+              ? 'adjacent_enemy'
+              : row.target_rule,
         },
         params,
       };
@@ -690,9 +721,55 @@ export function buildSkillDefinitionDocument(
     effectsBySkill.set(row.skill_id, list);
   }
 
-  const definitions = skillRows.map((row) => ({
-    skillId: row.skill_id,
-    pieceChars: skillToPieceCodes.get(row.skill_id) ?? [],
+  const definitions = skillRows.map((row) => {
+    const rawPieceChars = skillToPieceCodes.get(row.skill_id) ?? [];
+    const normalizedPieceChars = Array.from(
+      new Set(
+        rawPieceChars.flatMap((pieceChar) => {
+          const normalized = normalizePieceLookupCode(pieceChar);
+          return normalized && normalized !== pieceChar ? [pieceChar, normalized] : [pieceChar];
+        }),
+      ),
+    );
+    const rawConditions = (conditionsBySkill.get(row.skill_id) ?? [])
+      .sort((a, b) => a.condition_order - b.condition_order)
+      .map((condition) => ({
+        order: condition.condition_order,
+        group: condition.condition_group,
+        type: condition.condition_type,
+        params: condition.params_json ?? {},
+      }));
+    const rawEffects = (effectsBySkill.get(row.skill_id) ?? [])
+      .filter(isSkillEffectReadyRow)
+      .sort((a, b) => a.effect_order - b.effect_order)
+      .map((effect) => ({
+        order: effect.effect_order,
+        group: effect.effect_group,
+        type: effect.effect_type,
+        target: {
+          group: effect.target_group,
+          selector: effect.target_selector,
+        },
+        params: effect.params_json ?? {},
+      }));
+    const shouldForceFlameRule = normalizedPieceChars.some((pieceChar) => isFlamePieceAlias(pieceChar));
+    const conditions = shouldForceFlameRule
+      ? [{ order: 1, group: 'probability', type: 'chance_roll', params: { procChance: 0.2 } }]
+      : rawConditions;
+    const effects = shouldForceFlameRule
+      ? [
+          {
+            order: 1,
+            group: 'piece_state',
+            type: 'remove_piece',
+            target: { group: 'adjacent', selector: 'adjacent_enemy' },
+            params: { randomOne: true },
+          },
+        ]
+      : rawEffects;
+    return {
+      skillId: row.skill_id,
+      pieceChars: normalizedPieceChars,
     source: {
       skillText: row.skill_desc,
       sourceKind: normalizeSourceKind(row.source_kind),
@@ -707,30 +784,12 @@ export function buildSkillDefinitionDocument(
       group: row.trigger_group ?? 'special',
       type: row.trigger_type ?? 'script_hook',
     },
-    conditions: (conditionsBySkill.get(row.skill_id) ?? [])
-      .sort((a, b) => a.condition_order - b.condition_order)
-      .map((condition) => ({
-        order: condition.condition_order,
-        group: condition.condition_group,
-        type: condition.condition_type,
-        params: condition.params_json ?? {},
-      })),
-    effects: (effectsBySkill.get(row.skill_id) ?? [])
-      .filter(isSkillEffectReadyRow)
-      .sort((a, b) => a.effect_order - b.effect_order)
-      .map((effect) => ({
-        order: effect.effect_order,
-        group: effect.effect_group,
-        type: effect.effect_type,
-        target: {
-          group: effect.target_group,
-          selector: effect.target_selector,
-        },
-        params: effect.params_json ?? {},
-      })),
+    conditions,
+    effects,
     scriptHook: row.script_hook,
     notes: null,
-  }));
+    };
+  });
 
   const sourceOfTruth = definitions.flatMap((definition) =>
     definition.pieceChars.map((pieceChar) => ({
@@ -785,8 +844,18 @@ export function collectPieceCodesForSkillLookup(
   for (const code of extractPieceCodesFromHands(position.hands)) set.add(code);
   for (const code of extractPieceCodesFromBoardState(position.boardState, mappingService)) set.add(code);
   for (const mv of position.legalMoves) {
-    if (mv.pieceCode) set.add(mv.pieceCode.toUpperCase());
-    if (mv.dropPieceCode) set.add(mv.dropPieceCode.toUpperCase());
+    if (mv.pieceCode) {
+      const raw = mv.pieceCode.toUpperCase();
+      set.add(raw);
+      const normalized = normalizePieceLookupCode(raw);
+      if (normalized) set.add(normalized);
+    }
+    if (mv.dropPieceCode) {
+      const raw = mv.dropPieceCode.toUpperCase();
+      set.add(raw);
+      const normalized = normalizePieceLookupCode(raw);
+      if (normalized) set.add(normalized);
+    }
   }
 
   return set;
@@ -816,7 +885,10 @@ function extractPieceCodesFromBoardState(
 
     const pieceCode = nested.pieceCode ?? nested.piece_code ?? nested.code;
     if (typeof pieceCode === 'string' && pieceCode.trim().length > 0) {
-      out.add(pieceCode.trim().toUpperCase());
+      const raw = pieceCode.trim().toUpperCase();
+      out.add(raw);
+      const normalized = normalizePieceLookupCode(raw);
+      if (normalized) out.add(normalized);
     }
 
     const char = nested.char ?? entry.char;

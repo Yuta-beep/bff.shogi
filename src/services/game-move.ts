@@ -443,11 +443,12 @@ export function createCommitGameMove(
     metrics.enrichPositionMs = Date.now() - enrichStart;
     const normalizedMove = withCapturedPieceCode(currentPosition, input.move, mappingService);
 
+    const moveForEngine = normalizeMovePieceCodesForEngine(normalizedMove);
     const applyStart = Date.now();
     const nextPosition = await retryOnTransientError(() =>
       deps.applyMove({
         position: currentPosition,
-        selectedMove: normalizedMove,
+        selectedMove: moveForEngine,
       }),
     );
     metrics.applyMoveMs = Date.now() - applyStart;
@@ -478,7 +479,7 @@ export function createCommitGameMove(
         gameId: input.gameId,
         moveNo: expectedMoveNo,
         actorSide: input.actorSide,
-        move: normalizedMove,
+        move: moveForEngine,
         thoughtMs: input.thoughtMs ?? null,
         position: persistedPosition,
         game: nextGame,
@@ -519,12 +520,35 @@ export function createCommitGameMove(
       moveNo: expectedMoveNo,
       actorSide: input.actorSide,
       clientMoveId: input.clientMoveId ?? null,
-      move: normalizedMove,
-      skillTriggered: isSkillTriggeredMove(normalizedMove),
+      move: moveForEngine,
+      skillTriggered: isSkillTriggeredMove(moveForEngine),
       serverAppliedAt,
       position: persistedPosition,
       game: nextGame,
     };
+  };
+}
+
+function normalizeMovePieceCode(raw: string | null | undefined): string | null | undefined {
+  if (raw == null) return raw;
+  const upper = raw.trim().toUpperCase();
+  if (!upper) return upper;
+  const withoutPrefix = upper.startsWith('PIECE_SHOGI_')
+    ? upper.slice('PIECE_SHOGI_'.length)
+    : upper.startsWith('PIECE_')
+      ? upper.slice('PIECE_'.length)
+      : upper;
+  // ai.shogi 側の explicit override は FIRE コードを参照するため、ENN を同義として寄せる。
+  if (withoutPrefix === 'ENN') return 'FIRE';
+  return withoutPrefix;
+}
+
+function normalizeMovePieceCodesForEngine(move: AiMove): AiMove {
+  return {
+    ...move,
+    pieceCode: normalizeMovePieceCode(move.pieceCode) ?? move.pieceCode,
+    dropPieceCode: normalizeMovePieceCode(move.dropPieceCode) ?? move.dropPieceCode,
+    capturedPieceCode: normalizeMovePieceCode(move.capturedPieceCode) ?? move.capturedPieceCode,
   };
 }
 
