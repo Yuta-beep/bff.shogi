@@ -51,7 +51,7 @@ resource "aws_cloudwatch_log_group" "lambda" {
 resource "aws_lambda_function" "api" {
   function_name = local.lambda_function
   role          = aws_iam_role.lambda_execution.arn
-  runtime       = "nodejs20.x"
+  runtime       = "nodejs22.x"
   handler       = "run.sh"
   architectures = [var.lambda_architecture]
   filename      = var.lambda_zip_path

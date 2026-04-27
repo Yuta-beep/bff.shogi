@@ -240,15 +240,12 @@ export async function attachSkillEffectsToAiRequestWithClient(
   const pieceIdToDisplayChar = new Map(
     [...displayCharToPieceId.entries()].map(([displayChar, id]) => [id, displayChar]),
   );
-  const unresolvedDisplayChars = [...pieceCodes].filter(
-    (code) => !displayCharToPieceId.has(code),
-  );
+  const unresolvedDisplayChars = [...pieceCodes].filter((code) => !displayCharToPieceId.has(code));
   const fallbackKanji = new Set<string>();
   for (const code of unresolvedDisplayChars) {
     const normalizedCode = normalizePieceLookupCode(code);
     const mapped =
-      DISPLAY_TO_KANJI_FALLBACK[code.toUpperCase()] ??
-      DISPLAY_TO_KANJI_FALLBACK[normalizedCode];
+      DISPLAY_TO_KANJI_FALLBACK[code.toUpperCase()] ?? DISPLAY_TO_KANJI_FALLBACK[normalizedCode];
     if (mapped) fallbackKanji.add(mapped);
     // すでに漢字で入っているケース（例: 毒, 沼）も拾う
     fallbackKanji.add(code);
@@ -752,7 +749,9 @@ export function buildSkillDefinitionDocument(
         },
         params: effect.params_json ?? {},
       }));
-    const shouldForceFlameRule = normalizedPieceChars.some((pieceChar) => isFlamePieceAlias(pieceChar));
+    const shouldForceFlameRule = normalizedPieceChars.some((pieceChar) =>
+      isFlamePieceAlias(pieceChar),
+    );
     const conditions = shouldForceFlameRule
       ? [{ order: 1, group: 'probability', type: 'chance_roll', params: { procChance: 0.2 } }]
       : rawConditions;
@@ -770,24 +769,24 @@ export function buildSkillDefinitionDocument(
     return {
       skillId: row.skill_id,
       pieceChars: normalizedPieceChars,
-    source: {
-      skillText: row.skill_desc,
-      sourceKind: normalizeSourceKind(row.source_kind),
-      sourceFile: row.source_file ?? '',
-      sourceFunction: row.source_function ?? '',
-    },
-    classification: {
-      implementationKind: row.implementation_kind ?? 'script_hook',
-      tags: normalizeTagList(row.tags_json),
-    },
-    trigger: {
-      group: row.trigger_group ?? 'special',
-      type: row.trigger_type ?? 'script_hook',
-    },
-    conditions,
-    effects,
-    scriptHook: row.script_hook,
-    notes: null,
+      source: {
+        skillText: row.skill_desc,
+        sourceKind: normalizeSourceKind(row.source_kind),
+        sourceFile: row.source_file ?? '',
+        sourceFunction: row.source_function ?? '',
+      },
+      classification: {
+        implementationKind: row.implementation_kind ?? 'script_hook',
+        tags: normalizeTagList(row.tags_json),
+      },
+      trigger: {
+        group: row.trigger_group ?? 'special',
+        type: row.trigger_type ?? 'script_hook',
+      },
+      conditions,
+      effects,
+      scriptHook: row.script_hook,
+      notes: null,
     };
   });
 
@@ -842,7 +841,8 @@ export function collectPieceCodesForSkillLookup(
   for (const code of extractPieceCodesFromSfen(position.sfen ?? null, mappingService))
     set.add(code);
   for (const code of extractPieceCodesFromHands(position.hands)) set.add(code);
-  for (const code of extractPieceCodesFromBoardState(position.boardState, mappingService)) set.add(code);
+  for (const code of extractPieceCodesFromBoardState(position.boardState, mappingService))
+    set.add(code);
   for (const mv of position.legalMoves) {
     if (mv.pieceCode) {
       const raw = mv.pieceCode.toUpperCase();
