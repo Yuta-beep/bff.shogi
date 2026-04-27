@@ -120,10 +120,7 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
 
     if (mappingError) throw mappingError;
 
-    const mappingByPieceId = new Map<
-      number,
-      { displayChar: string; canonicalPieceCode: string }
-    >();
+    const mappingByPieceId = new Map<number, { displayChar: string; canonicalPieceCode: string }>();
     for (const row of mappingRows ?? []) {
       mappingByPieceId.set(row.piece_id as number, {
         displayChar: (row.display_char as string) ?? '',

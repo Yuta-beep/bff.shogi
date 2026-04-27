@@ -49,7 +49,10 @@ export async function executeAiTurn(input: ExecuteAiTurnInput): Promise<AiTurnRe
   };
   const response = await requestAiMove(aiRequest);
   const legalForCurrent = await requestLegalMoves({ position: currentPosition });
-  const alliedCells = alliedCellsFromBoardState(currentPosition.boardState, currentPosition.sideToMove);
+  const alliedCells = alliedCellsFromBoardState(
+    currentPosition.boardState,
+    currentPosition.sideToMove,
+  );
   const sanitizedLegal = legalForCurrent.legalMoves.filter(
     (move) => !isMoveIntoAlliedCell(move, alliedCells),
   );
@@ -98,7 +101,10 @@ export async function executeAiTurn(input: ExecuteAiTurnInput): Promise<AiTurnRe
     }
 
     const legal = await requestLegalMoves({ position: currentPosition });
-    const alliedCells = alliedCellsFromBoardState(currentPosition.boardState, currentPosition.sideToMove);
+    const alliedCells = alliedCellsFromBoardState(
+      currentPosition.boardState,
+      currentPosition.sideToMove,
+    );
     const fallbackMove =
       legal.legalMoves.find((move) => !isMoveIntoAlliedCell(move, alliedCells)) ??
       legal.legalMoves[0] ??
