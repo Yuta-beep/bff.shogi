@@ -83,4 +83,61 @@ describe('loadGameLegalMoves', () => {
     expect(result.legalMoves.length).toBe(2);
     expect(result.legalMoves[1]?.dropPieceCode).toBe('FU');
   });
+
+  it('appends house_skill_only when board has 家 and engine omits it', async () => {
+    const mappingService = PieceMappingService.fromStatic([]);
+    const loadGameLegalMoves = createLoadGameLegalMoves({
+      loadGameState: async () => ({
+        gameId: 'game-house',
+        position: {
+          sideToMove: 'player',
+          turnNumber: 1,
+          moveCount: 0,
+          sfen: '9/9/9/9/9/9/9/9/9 b - 1',
+          stateHash: null,
+          boardState: {
+            pieces: [
+              { side: 'player', row: 8, col: 4, char: '家', pieceCode: 'HOUSE' },
+              { side: 'enemy', row: 0, col: 4, char: '玉', pieceCode: 'OU' },
+            ],
+          },
+          hands: { player: {}, enemy: {} },
+        },
+        game: {
+          status: 'in_progress',
+          result: null,
+          winnerSide: null,
+        },
+      }),
+      enrichPosition: async (_gameId, position, moveNo) => ({
+        ...position,
+        moveCount: moveNo - 1,
+        legalMoves: [],
+      }),
+      requestLegalMoves: async () => ({
+        legalMoves: [
+          {
+            fromRow: 8,
+            fromCol: 4,
+            toRow: 7,
+            toCol: 4,
+            pieceCode: 'FU',
+            promote: false,
+            dropPieceCode: null,
+            capturedPieceCode: null,
+            notation: null,
+          },
+        ],
+      }),
+      mappingService,
+    });
+
+    const result = await loadGameLegalMoves({ gameId: 'game-house' });
+    const houseSkill = result.legalMoves.find((m) => m.notation === 'house_skill_only');
+    expect(houseSkill).toBeDefined();
+    expect(houseSkill?.fromRow).toBe(8);
+    expect(houseSkill?.fromCol).toBe(4);
+    expect(houseSkill?.toRow).toBe(8);
+    expect(houseSkill?.toCol).toBe(4);
+  });
 });

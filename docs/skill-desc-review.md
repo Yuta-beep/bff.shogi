@@ -39,8 +39,8 @@
 | 35 | 鉱(鉱山) | 20%の確率で味方の「歩」を「金」「銀」「銅」に変化させる。 | passive | unspecified | transform_piece | passive | 0.2 |  | rule_only_v2 |
 | 36 | 墓(墓主) | 移動時20％の確率で「霊」駒を召喚する。 | active_or_triggered | unspecified | summon_piece | on_move | 0.2 |  | rule_only_v2 |
 | 37 | 霊(霊体) | 敵駒に取られても相手の持ち駒に加わらない。 | passive | self | capture_constraint | on_captured |  |  | rule_only_v2 |
-| 38 | 幻(幻影) | 50％の確率で敵駒に取られるのを回避する。 | passive | enemy_piece | defense_or_immunity | passive | 0.5 |  | rule_only_v2 |
-| 39 | 霧(霧) | 周囲の敵駒を20％の確率で相手の持ち駒に送る。 | passive | adjacent_area | send_to_hand | passive | 0.2 |  | rule_only_v2 |
+| 38 | 幻(幻影) | 周囲に空きマスがあるとき、被捕獲時50％で回避して空きマスへ移動。 | passive | enemy_piece | defense_or_immunity | passive | 0.5 |  | rule_only_v2 |
+| 39 | 霧(霧) | 周囲の敵駒を30％の確率で相手の持ち駒に送る。 | passive | adjacent_area | send_to_hand | passive | 0.3 |  | rule_only_v2 |
 | 40 | 月(月) | ターンごとに移動能力が変化する。 | passive | self | modify_movement | on_turn_start |  |  | rule_only_v2 |
 | 41 | 舟(舟主) | 移動時後方の味方駒を連れていく。 | active_or_triggered | ally_piece | linked_action | on_move |  |  | rule_only_v2 |
 | 42 | 機(機械) | 左または右隣りの見方駒のスキルをコピーする。 | passive | unspecified | copy_ability | passive |  |  | rule_only_v2 |

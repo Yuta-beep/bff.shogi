@@ -1296,7 +1296,7 @@
     },
     {
       "id": 38,
-      "skillDesc": "50％の確率で敵駒に取られるのを回避する。",
+      "skillDesc": "周囲に空きマスがあるとき、敵駒に取られるとき50％の確率で取られるのを回避して空きマスに移動する。",
       "structured": {
         "skillType": "passive",
         "targetRule": "enemy_piece",
@@ -1320,9 +1320,9 @@
             "durationTurns": null,
             "radius": null,
             "valueNum": null,
-            "valueText": "50%の確率で敵駒に取られるのを回避する",
+            "valueText": "周囲空きマスあり・被捕獲時50%で隣接空きマスへ退避",
             "params": {
-              "sourceSentence": "50%の確率で敵駒に取られるのを回避する"
+              "sourceSentence": "周囲に空きマスがあるとき、被捕獲時50%で回避して空きマスへ移動"
             }
           }
         ]
@@ -1330,12 +1330,12 @@
     },
     {
       "id": 39,
-      "skillDesc": "周囲の敵駒を20％の確率で相手の持ち駒に送る。",
+      "skillDesc": "周囲の敵駒を30％の確率で相手の持ち駒に送る。",
       "structured": {
         "skillType": "passive",
         "targetRule": "adjacent_area",
         "effectSummaryType": "send_to_hand",
-        "procChance": 0.2,
+        "procChance": 0.3,
         "durationTurns": null,
         "triggerTiming": "passive",
         "scriptHook": null,
@@ -1350,7 +1350,7 @@
             "triggerTiming": "passive",
             "effectType": "send_to_hand",
             "targetRule": "adjacent_area",
-            "procChance": 0.2,
+            "procChance": 0.3,
             "durationTurns": null,
             "radius": 1,
             "valueNum": null,

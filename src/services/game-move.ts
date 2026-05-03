@@ -738,7 +738,7 @@ function withCapturedPieceCode(
   move: AiMove,
   mappingService: PieceMappingService,
 ): AiMove {
-  if (move.notation === 'time_skill_only') {
+  if (move.notation === 'time_skill_only' || move.notation === 'house_skill_only') {
     return { ...move, capturedPieceCode: null };
   }
   if (move.capturedPieceCode || move.dropPieceCode) {
@@ -804,6 +804,7 @@ function isSkillTriggeredMove(move: AiMove): boolean {
   if (!notation) return false;
   if (notation === 'time_normal') return false;
   if (notation === 'time_skill_only') return true;
+  if (notation === 'house_skill_only') return true;
   if (/^[1-9][a-i][1-9][a-i]\+?$/i.test(notation)) return false;
   return true;
 }

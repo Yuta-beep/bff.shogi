@@ -166,7 +166,7 @@
     },
     {
       "pieceChar": "霧",
-      "skillText": "周囲の敵駒を20％の確率で相手の持ち駒に送る。",
+      "skillText": "周囲の敵駒を30％の確率で相手の持ち駒に送る。",
       "sourceFile": "../../SHOGI_GAME/piece_info.html",
       "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerMistSkill"
     },
@@ -2577,7 +2577,7 @@
       "skillId": 38,
       "pieceChars": ["幻"],
       "source": {
-        "skillText": "50％の確率で敵駒に取られるのを回避する。",
+        "skillText": "周囲に空きマスがあるとき、敵駒に取られるとき50％の確率で取られるのを回避して空きマスに移動する。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_38"
@@ -2959,7 +2959,7 @@
       "skillId": 39,
       "pieceChars": ["霧"],
       "source": {
-        "skillText": "周囲の敵駒を20％の確率で相手の持ち駒に送る。",
+        "skillText": "周囲の敵駒を30％の確率で相手の持ち駒に送る。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "triggerMistSkill"
@@ -2978,7 +2978,7 @@
           "group": "probability",
           "type": "chance_roll",
           "params": {
-            "procChance": 0.2
+            "procChance": 0.3
           }
         },
         {
@@ -3003,7 +3003,7 @@
         }
       ],
       "scriptHook": null,
-      "notes": "本来の周囲対象選択は後回しにし、root move 評価では隣接敵1体を相手手駒へ戻す最小 executor で sample 化する"
+      "notes": "移動後に 30% で隣接敵1体をその駒の持ち主の手駒へ送る（executor: skill-runtime send_to_hand）"
     },
     {
       "skillId": 43,

@@ -75,6 +75,26 @@ const EXPLICIT_MAPPINGS: readonly ExplicitMapping[] = [
   { kanji: '魔', displayChar: 'MAK', sfenCode: 'Y', canonicalCode: 'demon', isSpecial: true },
   { kanji: '毒', displayChar: 'POISON', sfenCode: '=', canonicalCode: 'poison', isSpecial: true },
   { kanji: '沼', displayChar: 'SWAMP', sfenCode: '|', canonicalCode: 'swamp', isSpecial: true },
+  // 幻・霧: 自動割当 ZAA 系は盤面 SFEN が 1 文字ずつ誤読みされやすいため、固定の多文字トークンを割り当てる
+  {
+    kanji: '幻',
+    displayChar: 'PHANTOM',
+    sfenCode: 'ZPH',
+    canonicalCode: 'phantom',
+    isSpecial: true,
+  },
+  { kanji: '霧', displayChar: 'MIST', sfenCode: 'ZMI', canonicalCode: 'mist', isSpecial: true },
+  {
+    kanji: '機',
+    displayChar: 'MACHINE',
+    sfenCode: 'ZMC',
+    canonicalCode: 'machine',
+    isSpecial: true,
+  },
+  { kanji: '歯', displayChar: 'GEAR', sfenCode: 'ZGR', canonicalCode: 'gear', isSpecial: true },
+  { kanji: '家', displayChar: 'HOUSE', sfenCode: 'ZIE', canonicalCode: 'house', isSpecial: true },
+  { kanji: '民', displayChar: 'PEOPLE', sfenCode: 'ZMN', canonicalCode: 'people', isSpecial: true },
+  { kanji: '畑', displayChar: 'FIELD', sfenCode: 'ZTA', canonicalCode: 'field', isSpecial: true },
 ] as const;
 
 const explicitByKanji = new Map(EXPLICIT_MAPPINGS.map((entry) => [entry.kanji, entry]));
