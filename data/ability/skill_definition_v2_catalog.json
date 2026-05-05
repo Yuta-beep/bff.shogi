@@ -226,13 +226,13 @@
     },
     {
       "pieceChar": "刀",
-      "skillText": "敵駒を取ったとき、左右にいる敵駒もまとめて取る。",
+      "skillText": "敵駒を取ったとき、その駒の左右にいる敵駒もまとめて取る。",
       "sourceFile": "../../SHOGI_GAME/piece_info.html",
       "sourceFunction": "../../SHOGI_GAME/piece_info.html::skill_52"
     },
     {
       "pieceChar": "銃",
-      "skillText": "移動方向の1、2マス先に敵駒がいる場合、まとめて取る。",
+      "skillText": "前方2マスと斜め後ろ2マスに移動できる。前方は1マス目に敵がいても2マス目へ進みまとめて取れる。",
       "sourceFile": "../../SHOGI_GAME/piece_info.html",
       "sourceFunction": "../../SHOGI_GAME/piece_info.html::skill_54"
     },
@@ -3791,13 +3791,13 @@
         }
       ],
       "scriptHook": null,
-      "notes": "本来の左右限定同時捕獲は後回しにし、root move 評価では capture 後に隣接敵を追加で除去する最小 executor で sample 化する"
+      "notes": "取ったマスと同一行の左右隣の敵を除去し手駒に加える（王・玉・鎧除外）。"
     },
     {
       "skillId": 54,
       "pieceChars": ["銃"],
       "source": {
-        "skillText": "移動方向の1、2マス先に敵駒がいる場合、まとめて取る。",
+        "skillText": "前方2マスと斜め後ろ2マスに移動できる。前方は1マス目に敵がいても2マス目へ進みまとめて取れる。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_54"
@@ -3826,7 +3826,7 @@
         }
       ],
       "scriptHook": null,
-      "notes": "本来の移動方向 1-2 マス先まとめ取りは後回しにし、root move 評価では正面敵 1 体を追加除去する最小 executor で sample 化する"
+      "notes": "移動・前方貫通取りはクライアント合法手／apply-move で実装。本定義は参照用。"
     },
     {
       "skillId": 1,

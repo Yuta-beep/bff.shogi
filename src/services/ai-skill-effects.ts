@@ -13,6 +13,9 @@ const DISPLAY_TO_KANJI_FALLBACK: Readonly<Record<string, string>> = {
   SWAMP: '沼',
   RAINBOW: '虹',
   CLOUD: '雲',
+  SWORD: '刀',
+  KATANA: '刀',
+  GUN: '銃',
   ENN: '炎',
   FIRE: '炎',
   OU: '玉',
@@ -199,6 +202,127 @@ type SkillPayload = {
   legacyEffects: Record<string, unknown>[];
 };
 
+/** DB の m_piece.skill_id 欠損時でも、盤上に刀／銃があれば AI 用 skill_definitions_v2 に載せる（クライアント引擎と同一定義）。 */
+const CANONICAL_KATANA_SKILL_DEF: SkillDefinitionEntry = {
+  skillId: 52,
+  pieceChars: ['刀'],
+  source: {
+    skillText:
+      '前方ちょうど1マスで敵駒を取ったとき、着地点の左右1マスにいる敵駒もまとめて取る（鎧は除く）。実装はクライアント apply-move。',
+    sourceKind: 'manual',
+    sourceFile: 'ai-skill-effects',
+    sourceFunction: 'mergeCanonicalKatanaGunSkillDefinitions',
+  },
+  classification: {
+    implementationKind: 'primitive',
+    tags: ['capture_trigger', 'multi_capture'],
+  },
+  trigger: {
+    group: 'event_capture',
+    type: 'after_capture',
+  },
+  conditions: [],
+  effects: [
+    {
+      order: 1,
+      group: 'capture_rule',
+      type: 'multi_capture',
+      target: { group: 'adjacent', selector: 'adjacent_enemy' },
+      params: { captureMode: 'adjacent_after_capture' },
+    },
+  ],
+  scriptHook: null,
+  notes: 'canonical-client-engine-parity',
+};
+
+const CANONICAL_GUN_SKILL_DEF: SkillDefinitionEntry = {
+  skillId: 54,
+  pieceChars: ['銃'],
+  source: {
+    skillText:
+      '前方ちょうど2マスまたは斜め後ろ2マスへの貫通取り。実装はクライアント apply-move（skill-runtime は銃で二重実行しない）。',
+    sourceKind: 'manual',
+    sourceFile: 'ai-skill-effects',
+    sourceFunction: 'mergeCanonicalKatanaGunSkillDefinitions',
+  },
+  classification: {
+    implementationKind: 'primitive',
+    tags: ['continuous_rule', 'multi_capture'],
+  },
+  trigger: {
+    group: 'continuous',
+    type: 'continuous_rule',
+  },
+  conditions: [],
+  effects: [
+    {
+      order: 1,
+      group: 'capture_rule',
+      type: 'multi_capture',
+      target: { group: 'line', selector: 'front_enemy' },
+      params: { captureMode: 'forward_chain' },
+    },
+  ],
+  scriptHook: null,
+  notes: 'canonical-client-engine-parity',
+};
+
+function pieceCodesIncludesKanji(pieceCodes: Set<string>, kanji: string): boolean {
+  for (const raw of pieceCodes) {
+    let c = raw;
+    try {
+      c = raw.normalize('NFKC');
+    } catch {
+      /* ignore */
+    }
+    if (c === kanji) return true;
+  }
+  return false;
+}
+
+function hasPieceKanji(
+  pieceCodes: Set<string>,
+  pieceRows: PieceSkillRow[],
+  kanji: '刀' | '銃',
+): boolean {
+  if (pieceCodesIncludesKanji(pieceCodes, kanji)) return true;
+  return pieceRows.some((row) => row.kanji === kanji);
+}
+
+function mergeCanonicalKatanaGunSkillDefinitions(
+  pieceCodes: Set<string>,
+  pieceRows: PieceSkillRow[],
+  definitions: SkillDefinitionDocument | null,
+): SkillDefinitionDocument | null {
+  const needKatana = hasPieceKanji(pieceCodes, pieceRows, '刀');
+  const needGun = hasPieceKanji(pieceCodes, pieceRows, '銃');
+  if (!needKatana && !needGun) return definitions;
+
+  const baseDefsFiltered = (definitions?.definitions ?? []).filter((d) => {
+    if (d.skillId === 52 && needKatana) return false;
+    if (d.skillId === 54 && needGun) return false;
+    return true;
+  });
+  const additions: SkillDefinitionEntry[] = [];
+  if (needKatana) additions.push(CANONICAL_KATANA_SKILL_DEF);
+  if (needGun) additions.push(CANONICAL_GUN_SKILL_DEF);
+  const merged = [...baseDefsFiltered, ...additions].sort((a, b) => a.skillId - b.skillId);
+  const sourceOfTruth = merged.flatMap((definition) =>
+    definition.pieceChars.map((pieceChar) => ({
+      pieceChar,
+      skillText: String(definition.source.skillText ?? ''),
+      sourceFile: String(definition.source.sourceFile ?? ''),
+      sourceFunction: String(definition.source.sourceFunction ?? ''),
+    })),
+  );
+  return {
+    version: definitions?.version ?? 'skill-definition-v2-canonical-katana-gun',
+    updatedAt: new Date().toISOString(),
+    sourceOfTruth,
+    definitions: merged,
+  };
+}
+
 type SkillQueryClient = {
   schema: (schema: string) => {
     from: (table: string) => any;
@@ -295,9 +419,18 @@ export async function attachSkillEffectsToAiRequestWithClient(
 
   const skillIds = Array.from(skillToPieceCodes.keys());
   if (skillIds.length === 0) {
+    const kanGunOnly = mergeCanonicalKatanaGunSkillDefinitions(pieceCodes, pieceRows, null);
+    if (!kanGunOnly) {
+      return withSkillPayload(input, {
+        registry: null,
+        definitions: null,
+        legacyEffects: [],
+      });
+    }
+    const registryKatanaGun = await loadSkillRegistryV2(client, useRegistryCache);
     return withSkillPayload(input, {
-      registry: null,
-      definitions: null,
+      registry: registryKatanaGun,
+      definitions: kanGunOnly,
       legacyEffects: [],
     });
   }
@@ -385,9 +518,15 @@ export async function attachSkillEffectsToAiRequestWithClient(
     );
   }
 
+  const definitionsMerged = mergeCanonicalKatanaGunSkillDefinitions(pieceCodes, pieceRows, definitions);
+  let registryOut = registry;
+  if (definitionsMerged && definitionsMerged.definitions.length > 0 && !registryOut) {
+    registryOut = await loadSkillRegistryV2(client, useRegistryCache);
+  }
+
   return withSkillPayload(input, {
-    registry,
-    definitions,
+    registry: registryOut,
+    definitions: definitionsMerged,
     legacyEffects,
   });
 }

@@ -18,6 +18,7 @@ type BoardPieceRow = {
   col: number;
   char: string;
   pieceCode: string | null;
+  kbossLivesRemaining?: number;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -53,9 +54,107 @@ function boardPiecesFromCanonicalBoardState(boardState: Record<string, unknown>)
       (typeof rawPiece?.code === 'string' ? (rawPiece.code as string) : null);
     const pieceCode = rawCode ? rawCode.toUpperCase() : null;
     const char = charNorm.length > 0 ? charNorm : fromChar;
-    out.push({ side, row, col, char, pieceCode });
+    const livesRaw = obj.kbossLivesRemaining ?? rawPiece?.kbossLivesRemaining;
+    const kbossLivesRemaining =
+      typeof livesRaw === 'number' && Number.isFinite(livesRaw) ? livesRaw : undefined;
+    out.push({ side, row, col, char, pieceCode, kbossLivesRemaining });
   }
   return out;
+}
+
+function normalizeCode(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const upper = raw.toUpperCase();
+  if (upper.startsWith('PIECE_SHOGI_')) return upper.slice('PIECE_SHOGI_'.length);
+  if (upper.startsWith('PIECE_')) return upper.slice('PIECE_'.length);
+  return upper;
+}
+
+function isGunPiece(row: BoardPieceRow): boolean {
+  return row.char === '銃' || normalizeCode(row.pieceCode) === 'GUN';
+}
+
+function isKingPiece(row: BoardPieceRow): boolean {
+  const c = normalizeCode(row.pieceCode);
+  return row.char === '王' || row.char === '玉' || c === 'OU' || c === 'KING';
+}
+
+function isArmorPiece(row: BoardPieceRow): boolean {
+  const c = normalizeCode(row.pieceCode);
+  return row.char === '鎧' || c === 'ARMOR';
+}
+
+function isKbossPiece(row: BoardPieceRow): boolean {
+  const c = normalizeCode(row.pieceCode);
+  return row.char === 'K' || c === 'KBOSS';
+}
+
+function kbossLives(row: BoardPieceRow): number {
+  const v = row.kbossLivesRemaining;
+  if (v === 1 || v === 2) return v;
+  return 2;
+}
+
+function buildOccupiedMap(rows: BoardPieceRow[]): Map<string, BoardPieceRow> {
+  const map = new Map<string, BoardPieceRow>();
+  for (const r of rows) map.set(`${r.row}:${r.col}`, r);
+  return map;
+}
+
+/** ai.shogi が返さないことがある銃の前方2マス貫通手を補完する。 */
+function mergeGunForwardPenetrationLegalMoves(
+  legalMoves: AiMove[],
+  position: CanonicalPosition,
+): AiMove[] {
+  const boardState = position.boardState as Record<string, unknown>;
+  const rows = boardPiecesFromCanonicalBoardState(boardState);
+  const occ = buildOccupiedMap(rows);
+  const side = position.sideToMove;
+  const forward = side === 'player' ? -1 : 1;
+  const hasMove = (fromRow: number, fromCol: number, toRow: number, toCol: number) =>
+    legalMoves.some(
+      (m) =>
+        m.fromRow === fromRow &&
+        m.fromCol === fromCol &&
+        m.toRow === toRow &&
+        m.toCol === toCol &&
+        !m.dropPieceCode,
+    );
+
+  const extras: AiMove[] = [];
+  for (const p of rows) {
+    if (p.side !== side || !isGunPiece(p)) continue;
+    const r1 = p.row + forward;
+    const r2 = p.row + 2 * forward;
+    const c = p.col;
+    if (r1 < 0 || r1 > 8 || r2 < 0 || r2 > 8) continue;
+    if (hasMove(p.row, p.col, r2, c)) continue;
+
+    const p1 = occ.get(`${r1}:${c}`) ?? null;
+    const p2 = occ.get(`${r2}:${c}`) ?? null;
+
+    if (p1 && p1.side === side && (isKingPiece(p1) || isArmorPiece(p1) || isKbossPiece(p1))) continue;
+    if (p2 && p2.side === side) continue;
+    if (p1 && isKingPiece(p1)) continue;
+    if (p2 && isKingPiece(p2)) continue;
+    if (p1 && isArmorPiece(p1)) continue;
+    if (p2 && isArmorPiece(p2)) continue;
+    if (p1 && isKbossPiece(p1) && kbossLives(p1) > 1) continue;
+
+    extras.push({
+      fromRow: p.row,
+      fromCol: p.col,
+      toRow: r2,
+      toCol: c,
+      pieceCode: p.pieceCode ?? 'GUN',
+      promote: false,
+      dropPieceCode: null,
+      capturedPieceCode: p2 && p2.side !== side ? p2.pieceCode ?? null : null,
+      notation: null,
+    });
+  }
+
+  return extras.length === 0 ? legalMoves : [...legalMoves, ...extras];
 }
 
 function mergeHouseSkillOnlyLegalMoves(
@@ -160,7 +259,8 @@ export function createLoadGameLegalMoves(
       mappingService,
     );
     const response = await deps.requestLegalMoves({ position: currentPosition });
-    const legalMoves = mergeHouseSkillOnlyLegalMoves(response.legalMoves, gameState.position);
+    const legalMovesHouseMerged = mergeHouseSkillOnlyLegalMoves(response.legalMoves, gameState.position);
+    const legalMoves = mergeGunForwardPenetrationLegalMoves(legalMovesHouseMerged, gameState.position);
 
     return {
       sideToMove: gameState.position.sideToMove,
