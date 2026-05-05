@@ -283,6 +283,98 @@ function reconcileCapturedPieceOwnership(
   return { ...next, sfen: parts.join(' ') };
 }
 
+function stampLastMovedPieceState(
+  position: CanonicalPosition,
+  move: AiMove,
+  actorSide: 'player' | 'enemy',
+  sourcePosition?: { boardState?: Record<string, unknown> | null } | null,
+): CanonicalPosition {
+  if (move.fromRow == null || move.fromCol == null) return position;
+  const boardStateRoot = asRecord(position.boardState);
+  if (!boardStateRoot) return position;
+  const skillStateRaw = asRecord(boardStateRoot.skill_state ?? boardStateRoot.skillState) ?? {};
+  const key = actorSide === 'player' ? 'last_player_moved_piece' : 'last_enemy_moved_piece';
+  const pieceRows = Array.isArray(boardStateRoot.pieces) ? boardStateRoot.pieces : [];
+  const sourceBoardState = asRecord(sourcePosition?.boardState ?? null);
+  const sourcePieceRows = Array.isArray(sourceBoardState?.pieces) ? sourceBoardState.pieces : [];
+  const movedPiece = pieceRows.map((raw) => asRecord(raw)).find((entry) => {
+    if (!entry) return false;
+    const row = typeof entry.row === 'number' ? entry.row : null;
+    const col = typeof entry.col === 'number' ? entry.col : null;
+    const side = entry.side === 'enemy' ? 'enemy' : 'player';
+    return row === move.toRow && col === move.toCol && side === actorSide;
+  });
+  const sourcePiece = sourcePieceRows.map((raw) => asRecord(raw)).find((entry) => {
+    if (!entry) return false;
+    const row = typeof entry.row === 'number' ? entry.row : null;
+    const col = typeof entry.col === 'number' ? entry.col : null;
+    const side = entry.side === 'enemy' ? 'enemy' : 'player';
+    return row === move.fromRow && col === move.fromCol && side === actorSide;
+  });
+  const sourceChar =
+    typeof sourcePiece?.char === 'string' && !/^piece_[a-z0-9]+$/i.test(sourcePiece.char.trim())
+      ? sourcePiece.char
+      : null;
+  const sourceCode = typeof sourcePiece?.pieceCode === 'string' ? sourcePiece.pieceCode : null;
+  const customMoveVectors = asRecord(sourceBoardState?.custom_move_vectors ?? null);
+  const rawCopiedVectors =
+    (typeof sourceCode === 'string' && Array.isArray(customMoveVectors?.[sourceCode.toUpperCase()])
+      ? (customMoveVectors?.[sourceCode.toUpperCase()] as unknown[])
+      : null) ??
+    (typeof move.pieceCode === 'string' &&
+    Array.isArray(customMoveVectors?.[move.pieceCode.toUpperCase()])
+      ? (customMoveVectors?.[move.pieceCode.toUpperCase()] as unknown[])
+      : null);
+  const copiedMoveVectors = Array.isArray(rawCopiedVectors)
+    ? rawCopiedVectors
+        .map((v) => asRecord(v))
+        .filter((v): v is Record<string, unknown> => Boolean(v))
+        .map((v) => {
+          const dc = Number(v.dc);
+          const dr = Number(v.dr);
+          const slide = v.slide === true;
+          const captureMode = typeof v.capture_mode === 'string' ? v.capture_mode : undefined;
+          if (!Number.isFinite(dc) || !Number.isFinite(dr)) return null;
+          return {
+            dx: dc,
+            dy: dr,
+            maxStep: slide ? 9 : 1,
+            ...(captureMode ? { captureMode } : {}),
+          };
+        })
+        .filter((v): v is { dx: number; dy: number; maxStep: number; captureMode?: string } => v != null)
+    : [];
+  const payload = {
+    side: actorSide,
+    row: move.toRow,
+    col: move.toCol,
+    // opaque id で上書きされると「書」のコピー元解決が壊れるため、着手情報の canonical code を優先する。
+    pieceCode:
+      sourceCode ??
+      move.pieceCode ??
+      (typeof movedPiece?.pieceCode === 'string' ? movedPiece.pieceCode : null),
+    char:
+      sourceChar ??
+      (typeof movedPiece?.char === 'string' &&
+      !/^piece_[a-z0-9]+$/i.test(movedPiece.char.trim())
+        ? movedPiece.char
+        : null),
+    promoted:
+      (typeof movedPiece?.promoted === 'boolean' && movedPiece.promoted) || move.promote === true,
+    ...(copiedMoveVectors.length > 0 ? { copiedMoveVectors } : {}),
+  };
+  return {
+    ...position,
+    boardState: {
+      ...boardStateRoot,
+      skill_state: {
+        ...skillStateRaw,
+        [key]: payload,
+      },
+    },
+  };
+}
+
 type LoadedGameState = {
   gameId: string;
   position: CanonicalPosition;
@@ -471,7 +563,13 @@ export function createCommitGameMove(
       input.actorSide,
       mappingService,
     );
-    const nextGame = deriveGameStatus(persistedPosition, mappingService);
+    const withLastMoved = stampLastMovedPieceState(
+      persistedPosition,
+      moveForEngine,
+      input.actorSide,
+      currentPosition as unknown as { boardState?: Record<string, unknown> | null },
+    );
+    const nextGame = deriveGameStatus(withLastMoved, mappingService);
 
     const persistStart = Date.now();
     await retryOnTransientError(() =>
@@ -481,7 +579,7 @@ export function createCommitGameMove(
         actorSide: input.actorSide,
         move: moveForEngine,
         thoughtMs: input.thoughtMs ?? null,
-        position: persistedPosition,
+        position: withLastMoved,
         game: nextGame,
       }),
     );
@@ -523,7 +621,7 @@ export function createCommitGameMove(
       move: moveForEngine,
       skillTriggered: isSkillTriggeredMove(moveForEngine),
       serverAppliedAt,
-      position: persistedPosition,
+      position: withLastMoved,
       game: nextGame,
     };
   };
