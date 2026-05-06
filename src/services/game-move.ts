@@ -537,12 +537,18 @@ export function createCommitGameMove(
 
     const moveForEngine = normalizeMovePieceCodesForEngine(normalizedMove);
     const applyStart = Date.now();
-    const nextPosition = await retryOnTransientError(() =>
+    const appliedPosition = await retryOnTransientError(() =>
       deps.applyMove({
         position: currentPosition,
         selectedMove: moveForEngine,
       }),
     );
+    const nextPosition = forceConsumeTurnIfShieldAborted({
+      before: currentPosition,
+      after: appliedPosition,
+      move: normalizedMove,
+      actorSide: input.actorSide,
+    });
     metrics.applyMoveMs = Date.now() - applyStart;
     const dropConsumedPosition = enforceDroppedPieceConsumed(
       gameState.position,
@@ -720,6 +726,67 @@ async function applyCanonicalMove(input: {
   return response.position;
 }
 
+function toggleSide(side: CanonicalPosition['sideToMove']): CanonicalPosition['sideToMove'] {
+  return side === 'player' ? 'enemy' : 'player';
+}
+
+function forceConsumeTurnIfShieldAborted(input: {
+  before: CanonicalPosition;
+  after: CanonicalPosition;
+  move: AiMove;
+  actorSide: 'player' | 'enemy';
+}): CanonicalPosition {
+  // 盾などで「取り」が無効化されたとき、エンジンが手番/手数を進めないことがある。
+  // 仕様: 攻撃側の手番は終了し、相手番に移る。
+  const attemptedCapture = (() => {
+    if (input.move.dropPieceCode) return false;
+    if (input.move.capturedPieceCode) return true;
+    // capturedPieceCode が欠けていても、before の盤上に相手駒がいるマスへ入る手は捕獲試行として扱う。
+    const boardState = (input.before.boardState ?? {}) as Record<string, unknown>;
+    const rawPieces = Array.isArray((boardState as any).pieces)
+      ? ((boardState as any).pieces as unknown[])
+      : Array.isArray((boardState as any).placements)
+        ? ((boardState as any).placements as unknown[])
+        : [];
+    for (const raw of rawPieces) {
+      if (!raw || typeof raw !== 'object') continue;
+      const obj = raw as any;
+      const r = typeof obj.row === 'number' ? obj.row : null;
+      const c = typeof obj.col === 'number' ? obj.col : null;
+      if (r !== input.move.toRow || c !== input.move.toCol) continue;
+      const side = obj.side === 'enemy' ? 'enemy' : 'player';
+      return side !== input.actorSide;
+    }
+    return false;
+  })();
+  const noTurnAdvance =
+    input.after.sideToMove === input.before.sideToMove && input.after.moveCount === input.before.moveCount;
+  if (!attemptedCapture || !noTurnAdvance) return input.after;
+
+  const nextMoveCount = input.before.moveCount + 1;
+  const nextSide = toggleSide(input.actorSide);
+
+  const nextSfen = (() => {
+    const sfen = input.after.sfen ?? input.before.sfen ?? null;
+    if (!sfen) return sfen;
+    const parts = sfen.trim().split(/\s+/);
+    if (parts.length < 4) return sfen;
+    parts[1] = nextSide === 'player' ? 'b' : 'w';
+    parts[3] = String(Math.max(1, nextMoveCount + 1));
+    return parts.join(' ');
+  })();
+
+  return {
+    ...input.after,
+    sideToMove: nextSide,
+    moveCount: nextMoveCount,
+    turnNumber: nextMoveCount + 1,
+    sfen: nextSfen,
+    // stateHash はエンジン由来のため不整合を避ける
+    stateHash: null,
+  };
+}
+
 async function persistMove(input: {
   gameId: string;
   moveNo: number;
@@ -843,7 +910,7 @@ function withCapturedPieceCode(
     return move;
   }
   const capturedPieceCode = pieceCodeAt(
-    position.sfen ?? null,
+    position,
     move.toRow,
     move.toCol,
     mappingService,
@@ -855,12 +922,46 @@ function withCapturedPieceCode(
 }
 
 function pieceCodeAt(
-  sfen: string | null,
+  position: CanonicalPosition,
   row: number,
   col: number,
   mappingService: PieceMappingService,
 ): string | null {
-  return mappingService.displayCharAtSquare(sfen, row, col);
+  const boardState = (position.boardState ?? {}) as Record<string, unknown>;
+  const rawPieces = Array.isArray((boardState as any).pieces)
+    ? ((boardState as any).pieces as unknown[])
+    : Array.isArray((boardState as any).placements)
+      ? ((boardState as any).placements as unknown[])
+      : [];
+  for (const raw of rawPieces) {
+    if (!raw || typeof raw !== 'object') continue;
+    const obj = raw as any;
+    const r = typeof obj.row === 'number' ? obj.row : null;
+    const c = typeof obj.col === 'number' ? obj.col : null;
+    if (r !== row || c !== col) continue;
+    const ch = typeof obj.char === 'string' ? obj.char : typeof obj.piece?.char === 'string' ? obj.piece.char : '';
+    const norm = (() => {
+      try {
+        return (ch ?? '').normalize('NFKC');
+      } catch {
+        return ch ?? '';
+      }
+    })();
+    // 盤上の表示漢字が分かる場合はそれを優先して capturedPieceCode を確定させる。
+    if (norm === '剣') return 'HOLY_SWORD';
+    if (norm === '刀') return 'SWORD';
+    if (norm === '盾') return 'SHIELD';
+    const pc =
+      typeof obj.pieceCode === 'string'
+        ? obj.pieceCode
+        : typeof obj.piece?.code === 'string'
+          ? obj.piece.code
+          : null;
+    if (pc) return pc.toUpperCase();
+    break;
+  }
+
+  return mappingService.displayCharAtSquare(position.sfen ?? null, row, col);
 }
 
 function deriveGameStatus(

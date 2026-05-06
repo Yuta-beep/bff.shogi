@@ -70,6 +70,14 @@ function normalizeCode(raw: string | null | undefined): string {
   return upper;
 }
 
+function resolveCapturedPieceCode(row: BoardPieceRow | null | undefined): string | null {
+  if (!row) return null;
+  if (row.char === '剣') return 'HOLY_SWORD';
+  if (row.char === '刀') return 'SWORD';
+  if (row.char === '盾') return 'SHIELD';
+  return row.pieceCode ?? null;
+}
+
 function isGunPiece(row: BoardPieceRow): boolean {
   return row.char === '銃' || normalizeCode(row.pieceCode) === 'GUN';
 }
@@ -149,7 +157,7 @@ function mergeGunForwardPenetrationLegalMoves(
       pieceCode: p.pieceCode ?? 'GUN',
       promote: false,
       dropPieceCode: null,
-      capturedPieceCode: p2 && p2.side !== side ? p2.pieceCode ?? null : null,
+      capturedPieceCode: p2 && p2.side !== side ? resolveCapturedPieceCode(p2) : null,
       notation: null,
     });
   }
