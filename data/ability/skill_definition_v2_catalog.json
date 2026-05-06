@@ -4,7 +4,7 @@
   "sourceOfTruth": [
     {
       "pieceChar": "滝",
-      "skillText": "移動時20%で周囲の敵駒を押し流す。",
+      "skillText": "移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す。",
       "sourceFile": "../../SHOGI_GAME/piece_info.html",
       "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerWaterfallSkill"
     },
@@ -296,7 +296,7 @@
       "skillId": 65,
       "pieceChars": ["滝"],
       "source": {
-        "skillText": "移動時20%で周囲の敵駒を押し流す。",
+        "skillText": "移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す。",
         "sourceKind": "online_battle",
         "sourceFile": "../../SHOGI_GAME/online_battle.html",
         "sourceFunction": "triggerWaterfallSkill"

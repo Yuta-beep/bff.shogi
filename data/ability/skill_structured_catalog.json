@@ -2248,7 +2248,7 @@
     },
     {
       "id": 65,
-      "skillDesc": "移動時20%で周囲の敵駒を押し流す。",
+      "skillDesc": "移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す。",
       "structured": {
         "skillType": "active_or_triggered",
         "targetRule": "adjacent_area",
@@ -2272,9 +2272,9 @@
             "durationTurns": null,
             "radius": 1,
             "valueNum": null,
-            "valueText": "移動時20%で周囲の敵駒を押し流す",
+            "valueText": "移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す",
             "params": {
-              "sourceSentence": "移動時20%で周囲の敵駒を押し流す"
+              "sourceSentence": "移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す"
             }
           }
         ]

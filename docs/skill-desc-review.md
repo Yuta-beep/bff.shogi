@@ -66,7 +66,7 @@
 | 62 | 盾(聖盾) | 前方以外の隣接する味方への攻撃を50%で無効化する。 | passive | unspecified | disable_piece | passive | 0.5 |  | rule_only_v2 |
 | 63 | 病(病魔) | 取られると相手駒を感染状態にし2ターン移動不能にする。 | active_or_triggered | enemy_piece | apply_status | on_captured |  | 2 | rule_only_v2 |
 | 64 | 薬(妙薬) | 隣接する味方駒の移動範囲を1マス延長する。 | passive | ally_piece | modify_movement | passive |  |  | rule_only_v2 |
-| 65 | 滝(大滝) | 移動時20%で周囲の敵駒を押し流す。 | active_or_triggered | adjacent_area | forced_move | on_move | 0.2 |  | rule_only_v2 |
+| 65 | 滝(大滝) | 移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す。 | active_or_triggered | adjacent_area | forced_move | on_move | 0.2 |  | rule_only_v2 |
 | 66 | 穴(大穴) | 取られた時、周囲のマスに4ターン侵入不可の穴を生成する。 | active_or_triggered | adjacent_area | board_hazard | on_captured |  | 4 | rule_only_v2 |
 | 67 | 淵(深淵) | 取られた時、相手駒を淵に沈めて3ターン行動不能にする。 | active_or_triggered | unspecified | apply_status | on_captured |  | 3 | rule_only_v2 |
 | 68 | 鬼(赤鬼) | 移動時に左右の敵駒を1マス遠ざける。敵駒を取った時、周囲のランダムな空マス1つを×マスにする。 | active_or_triggered | adjacent_area | composite | on_capture |  |  | rule_only_v2 |

@@ -211,7 +211,7 @@ describe('ai skill effects helpers', () => {
       [
         {
           skill_id: 65,
-          skill_desc: '移動時20%で周囲の敵駒を押し流す。',
+          skill_desc: '移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す。',
           implementation_kind: 'primitive',
           trigger_group: 'event_move',
           trigger_type: 'after_move',

@@ -369,7 +369,7 @@ values
   ('skill_f0d9029c7d66', 'Skill f0d902', '前方以外の隣接する味方への攻撃を50%で無効化する。', NULL, true, now(), now()),
   ('skill_e982c444d305', 'Skill e982c4', '取られると相手駒を感染状態にし2ターン移動不能にする。', NULL, true, now(), now()),
   ('skill_960ce1c3943b', 'Skill 960ce1', '隣接する味方駒の移動範囲を1マス延長する。', NULL, true, now(), now()),
-  ('skill_86a7d9d2b18f', 'Skill 86a7d9', '移動時20%で周囲の敵駒を押し流す。', NULL, true, now(), now()),
+  ('skill_86a7d9d2b18f', 'Skill 86a7d9', '移動時20％の確率で周囲の敵駒を全て相手の持ち駒に流す。', NULL, true, now(), now()),
   ('skill_1c47c30eaf8b', 'Skill 1c47c3', '取られた時、周囲のマスに4ターン侵入不可の穴を生成する。', NULL, true, now(), now()),
   ('skill_851ae0a2025f', 'Skill 851ae0', '取られた時、相手駒を淵に沈めて3ターン行動不能にする。', NULL, true, now(), now()),
   ('skill_f724995a7cc4', 'Skill f72499', '移動時に左右の敵駒を1マス遠ざける。敵駒を取った時、周囲のランダムな空マス1つを×マスにする。', NULL, true, now(), now()),
