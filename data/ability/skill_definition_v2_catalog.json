@@ -3598,7 +3598,7 @@
       "skillId": 63,
       "pieceChars": ["病"],
       "source": {
-        "skillText": "取られると相手駒を感染状態にし2ターン移動不能にする。",
+        "skillText": "取られると相手駒を感染状態にし3ターン移動不能にする。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_63"
@@ -3630,7 +3630,7 @@
           },
           "params": {
             "statusType": "infected_immobilized",
-            "durationTurns": 2
+            "durationTurns": 3
           }
         }
       ],
