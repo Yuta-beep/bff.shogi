@@ -297,20 +297,24 @@ function stampLastMovedPieceState(
   const pieceRows = Array.isArray(boardStateRoot.pieces) ? boardStateRoot.pieces : [];
   const sourceBoardState = asRecord(sourcePosition?.boardState ?? null);
   const sourcePieceRows = Array.isArray(sourceBoardState?.pieces) ? sourceBoardState.pieces : [];
-  const movedPiece = pieceRows.map((raw) => asRecord(raw)).find((entry) => {
-    if (!entry) return false;
-    const row = typeof entry.row === 'number' ? entry.row : null;
-    const col = typeof entry.col === 'number' ? entry.col : null;
-    const side = entry.side === 'enemy' ? 'enemy' : 'player';
-    return row === move.toRow && col === move.toCol && side === actorSide;
-  });
-  const sourcePiece = sourcePieceRows.map((raw) => asRecord(raw)).find((entry) => {
-    if (!entry) return false;
-    const row = typeof entry.row === 'number' ? entry.row : null;
-    const col = typeof entry.col === 'number' ? entry.col : null;
-    const side = entry.side === 'enemy' ? 'enemy' : 'player';
-    return row === move.fromRow && col === move.fromCol && side === actorSide;
-  });
+  const movedPiece = pieceRows
+    .map((raw) => asRecord(raw))
+    .find((entry) => {
+      if (!entry) return false;
+      const row = typeof entry.row === 'number' ? entry.row : null;
+      const col = typeof entry.col === 'number' ? entry.col : null;
+      const side = entry.side === 'enemy' ? 'enemy' : 'player';
+      return row === move.toRow && col === move.toCol && side === actorSide;
+    });
+  const sourcePiece = sourcePieceRows
+    .map((raw) => asRecord(raw))
+    .find((entry) => {
+      if (!entry) return false;
+      const row = typeof entry.row === 'number' ? entry.row : null;
+      const col = typeof entry.col === 'number' ? entry.col : null;
+      const side = entry.side === 'enemy' ? 'enemy' : 'player';
+      return row === move.fromRow && col === move.fromCol && side === actorSide;
+    });
   const sourceChar =
     typeof sourcePiece?.char === 'string' && !/^piece_[a-z0-9]+$/i.test(sourcePiece.char.trim())
       ? sourcePiece.char
@@ -342,7 +346,9 @@ function stampLastMovedPieceState(
             ...(captureMode ? { captureMode } : {}),
           };
         })
-        .filter((v): v is { dx: number; dy: number; maxStep: number; captureMode?: string } => v != null)
+        .filter(
+          (v): v is { dx: number; dy: number; maxStep: number; captureMode?: string } => v != null,
+        )
     : [];
   const payload = {
     side: actorSide,
@@ -355,8 +361,7 @@ function stampLastMovedPieceState(
       (typeof movedPiece?.pieceCode === 'string' ? movedPiece.pieceCode : null),
     char:
       sourceChar ??
-      (typeof movedPiece?.char === 'string' &&
-      !/^piece_[a-z0-9]+$/i.test(movedPiece.char.trim())
+      (typeof movedPiece?.char === 'string' && !/^piece_[a-z0-9]+$/i.test(movedPiece.char.trim())
         ? movedPiece.char
         : null),
     promoted:
@@ -760,7 +765,8 @@ function forceConsumeTurnIfShieldAborted(input: {
     return false;
   })();
   const noTurnAdvance =
-    input.after.sideToMove === input.before.sideToMove && input.after.moveCount === input.before.moveCount;
+    input.after.sideToMove === input.before.sideToMove &&
+    input.after.moveCount === input.before.moveCount;
   if (!attemptedCapture || !noTurnAdvance) return input.after;
 
   const nextMoveCount = input.before.moveCount + 1;
@@ -909,12 +915,7 @@ function withCapturedPieceCode(
   if (move.capturedPieceCode || move.dropPieceCode) {
     return move;
   }
-  const capturedPieceCode = pieceCodeAt(
-    position,
-    move.toRow,
-    move.toCol,
-    mappingService,
-  );
+  const capturedPieceCode = pieceCodeAt(position, move.toRow, move.toCol, mappingService);
   return {
     ...move,
     capturedPieceCode,
@@ -939,7 +940,12 @@ function pieceCodeAt(
     const r = typeof obj.row === 'number' ? obj.row : null;
     const c = typeof obj.col === 'number' ? obj.col : null;
     if (r !== row || c !== col) continue;
-    const ch = typeof obj.char === 'string' ? obj.char : typeof obj.piece?.char === 'string' ? obj.piece.char : '';
+    const ch =
+      typeof obj.char === 'string'
+        ? obj.char
+        : typeof obj.piece?.char === 'string'
+          ? obj.piece.char
+          : '';
     const norm = (() => {
       try {
         return (ch ?? '').normalize('NFKC');

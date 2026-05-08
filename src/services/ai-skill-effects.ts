@@ -520,7 +520,11 @@ export async function attachSkillEffectsToAiRequestWithClient(
     );
   }
 
-  const definitionsMerged = mergeCanonicalKatanaGunSkillDefinitions(pieceCodes, pieceRows, definitions);
+  const definitionsMerged = mergeCanonicalKatanaGunSkillDefinitions(
+    pieceCodes,
+    pieceRows,
+    definitions,
+  );
   let registryOut = registry;
   if (definitionsMerged && definitionsMerged.definitions.length > 0 && !registryOut) {
     registryOut = await loadSkillRegistryV2(client, useRegistryCache);

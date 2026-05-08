@@ -141,7 +141,8 @@ function mergeGunForwardPenetrationLegalMoves(
     const p1 = occ.get(`${r1}:${c}`) ?? null;
     const p2 = occ.get(`${r2}:${c}`) ?? null;
 
-    if (p1 && p1.side === side && (isKingPiece(p1) || isArmorPiece(p1) || isKbossPiece(p1))) continue;
+    if (p1 && p1.side === side && (isKingPiece(p1) || isArmorPiece(p1) || isKbossPiece(p1)))
+      continue;
     if (p2 && p2.side === side) continue;
     if (p1 && isKingPiece(p1)) continue;
     if (p2 && isKingPiece(p2)) continue;
@@ -267,8 +268,14 @@ export function createLoadGameLegalMoves(
       mappingService,
     );
     const response = await deps.requestLegalMoves({ position: currentPosition });
-    const legalMovesHouseMerged = mergeHouseSkillOnlyLegalMoves(response.legalMoves, gameState.position);
-    const legalMoves = mergeGunForwardPenetrationLegalMoves(legalMovesHouseMerged, gameState.position);
+    const legalMovesHouseMerged = mergeHouseSkillOnlyLegalMoves(
+      response.legalMoves,
+      gameState.position,
+    );
+    const legalMoves = mergeGunForwardPenetrationLegalMoves(
+      legalMovesHouseMerged,
+      gameState.position,
+    );
 
     return {
       sideToMove: gameState.position.sideToMove,

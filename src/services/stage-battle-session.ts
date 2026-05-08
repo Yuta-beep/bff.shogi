@@ -173,7 +173,7 @@ export function createStartStageBattleSession(
       throw error;
     }
 
-    const setup = await deps.getStageBattleSetup(stage.stage_id, input.playerId);
+    const setup = await deps.getStageBattleSetup(stage.stage_id, input.playerId, stage.stage_no);
     const expiresAt = new Date(Date.now() + (deps.ttlMs ?? DEFAULT_SESSION_TTL_MS)).toISOString();
 
     const snapshot = {

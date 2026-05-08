@@ -67,7 +67,11 @@ export async function getStageNoByIdMap(): Promise<Map<number, number>> {
   return new Map(rows.map((row) => [row.stage_id, row.stage_no]));
 }
 
-export async function getStageBattleSetup(stageId: number, playerId?: string | null) {
+export async function getStageBattleSetup(
+  stageId: number,
+  playerId?: string | null,
+  stageNo?: number,
+) {
   const boardSize = 9;
   const deckRowCount = 3;
   const playerDeckRowOffset = boardSize - deckRowCount;
@@ -195,6 +199,10 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
         ]
       : stagePlacementRows;
 
+  if (stageNo === 39) {
+    await applyStage39OniVariants(mergedPlacementRows);
+  }
+
   const rewards = rewardRes.error ? [] : (rewardRes.data ?? []);
 
   return {
@@ -243,4 +251,27 @@ export async function getStageBattleSetup(stageId: number, playerId?: string | n
       },
     })),
   };
+}
+
+async function applyStage39OniVariants(placementRows: any[]): Promise<void> {
+  const enemyOniRows = placementRows
+    .filter((row) => {
+      const piece = Array.isArray(row?.m_piece) ? row.m_piece[0] : row?.m_piece;
+      return row?.side === 'enemy' && piece?.kanji === '鬼';
+    })
+    .sort((a, b) => (a.col_no - b.col_no) || (a.row_no - b.row_no));
+
+  if (enemyOniRows.length < 2) return;
+
+  const left = enemyOniRows[0];
+  const right = enemyOniRows[enemyOniRows.length - 1];
+
+  const leftPiece = Array.isArray(left?.m_piece) ? left.m_piece[0] : left?.m_piece;
+  const rightPiece = Array.isArray(right?.m_piece) ? right.m_piece[0] : right?.m_piece;
+  if (!leftPiece || !rightPiece) return;
+
+  leftPiece.piece_code = 'blueOni';
+  leftPiece.name = '青鬼';
+  rightPiece.piece_code = 'blackOni';
+  rightPiece.name = '黒鬼';
 }
