@@ -1082,7 +1082,7 @@
       "skillId": 72,
       "pieceChars": ["獣"],
       "source": {
-        "skillText": "移動時敵駒から1つ選択し2ターン行動不能にする。",
+        "skillText": "移動時、前後左右に隣接する敵駒をすべて2ターン行動不能にする。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_72"
@@ -1099,7 +1099,7 @@
         {
           "order": 1,
           "group": "board_state",
-          "type": "adjacent_enemy_exists",
+          "type": "orthogonal_adjacent_enemy_exists",
           "params": {}
         }
       ],
@@ -1116,12 +1116,12 @@
             "statusType": "stun",
             "durationTurns": 2,
             "radius": 1,
-            "maxTargets": 1
+            "adjacency": "orthogonal"
           }
         }
       ],
       "scriptHook": null,
-      "notes": "牢と同型の move_trigger apply_status sample"
+      "notes": "前後左右の隣接敵を stun（skill-runtime adjacency=orthogonal）"
     },
     {
       "skillId": 3,
@@ -3208,37 +3208,23 @@
       "skillId": 73,
       "pieceChars": ["禽"],
       "source": {
-        "skillText": "移動時味方駒から1つ選択し2ターン無敵状態にする。",
+        "skillText": "移動後、真後ろ1マスが空いていればランダムな味方駒をそのマスへ移動させる。",
         "sourceKind": "piece_info",
         "sourceFile": "../../SHOGI_GAME/piece_info.html",
         "sourceFunction": "skill_73"
       },
       "classification": {
         "implementationKind": "primitive",
-        "tags": ["move_trigger", "defense_or_immunity"]
+        "tags": ["move_trigger", "relocate_ally"]
       },
       "trigger": {
         "group": "event_move",
         "type": "after_move"
       },
       "conditions": [],
-      "effects": [
-        {
-          "order": 1,
-          "group": "piece_state",
-          "type": "defense_or_immunity",
-          "target": {
-            "group": "adjacent",
-            "selector": "adjacent_ally"
-          },
-          "params": {
-            "mode": "grant_invulnerability",
-            "durationTurns": 2
-          }
-        }
-      ],
+      "effects": [],
       "scriptHook": null,
-      "notes": "任意の味方選択は後回しにし、root move 評価では隣接味方存在時の defense trace/bonus のみ先行実装する sample"
+      "notes": "盤面処理はアプリ側 skill-runtime（effects 空で二重適用しない）"
     },
     {
       "skillId": 70,

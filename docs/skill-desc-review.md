@@ -73,8 +73,8 @@
 | 69 | 朧(朧月) | 盤面に「死」、「魂」駒が残っていると、敵駒からの攻撃を回避する。 | passive | enemy_piece | defense_or_immunity | passive |  |  | rule_only_v2 |
 | 70 | 死(死神) | 味方の駒を取った敵駒に5ターン後に消滅する呪いをかける。 | passive | enemy_piece | remove_piece | passive |  | 5 | rule_only_v2 |
 | 71 | 魂(魂) | 盤面に「魂」が残っているとき、相手は「王」を攻撃できない。 | passive | board_cell | defense_or_immunity | passive |  |  | rule_only_v2 |
-| 72 | 獣(獣神) | 移動時敵駒から1つ選択し2ターン行動不能にする。 | active_or_triggered | enemy_piece | apply_status | on_move |  | 2 | rule_only_v2 |
-| 73 | 禽(猛禽類) | 移動時味方駒から1つ選択し2ターン無敵状態にする。 | active_or_triggered | ally_piece | defense_or_immunity | on_move |  | 2 | rule_only_v2 |
+| 72 | 獣(獣神) | 移動時、前後左右に隣接する敵駒をすべて2ターン行動不能にする。 | active_or_triggered | enemy_piece | apply_status | on_move |  | 2 | rule_only_v2 |
+| 73 | 禽(猛禽類) | 移動後、真後ろ1マスが空いていればランダムな味方駒をそのマスへ移動させる。 | active_or_triggered | ally_piece | relocate_ally | on_move |  | — | rule_only_v2 |
 | 74 | 心(心), 悟(悟り) | 移動時に周囲の敵駒を1ターン行動不能にする。 | active_or_triggered | adjacent_area | apply_status | on_move |  | 1 | rule_only_v2 |
 | 75 | 鬱(鬱) | 移動時もともといたマスを行動不能マスにする。 | active_or_triggered | board_cell | apply_status | on_move |  |  | rule_only_v2 |
 | 76 | 乙(乙) | 相手の駒を取ると、もう一度だけ移動ができる。 | active_or_triggered | unspecified | extra_action | on_capture |  |  | rule_only_v2 |

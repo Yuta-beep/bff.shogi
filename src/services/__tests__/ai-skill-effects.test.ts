@@ -311,16 +311,12 @@ describe('ai skill effects helpers', () => {
     const definitions =
       (enriched.position.boardState.skill_definitions_v2 as any)?.definitions ?? [];
     expect(definitions.map((definition: any) => definition.skillId)).toEqual([28, 73]);
-    expect(
-      definitions.map((definition: any) => [
-        definition.skillId,
-        definition.effects[0]?.type,
-        definition.effects[0]?.target?.selector,
-      ]),
-    ).toEqual([
-      [28, 'modify_movement', 'adjacent_enemy'],
-      [73, 'defense_or_immunity', 'adjacent_ally'],
-    ]);
+    const bySkillId = Object.fromEntries(
+      definitions.map((definition: any) => [definition.skillId, definition]),
+    );
+    expect(bySkillId[28].effects[0]?.type).toBe('modify_movement');
+    expect(bySkillId[28].effects[0]?.target?.selector).toBe('adjacent_enemy');
+    expect(bySkillId[73].effects ?? []).toHaveLength(0);
   });
 
   it('attaches batch A apply_status skills as v2 payload without legacy duplication', async () => {
