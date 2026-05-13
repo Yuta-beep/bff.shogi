@@ -80,6 +80,26 @@
 - Errors:
   - `500 INTERNAL_ERROR`
 
+### `POST /api/v1/online-match/battle-setup`
+- Planned success `200`: `data = { battleSetupId: string, status: "draft" | "validated" }`
+- Purpose:
+  - オンライン対戦用の初期盤面下書きを保存する
+
+### `POST /api/v1/online-match/battle-setup/:battleSetupId/validate`
+- Planned success `200`: `data = { battleSetupId: string, status: "validated", summary }`
+- Purpose:
+  - 所持駒、駒数、配置制約をサーバで検証する
+
+### `GET /api/v1/online-match/battle-setup/:battleSetupId`
+- Planned success `200`: `data = { battleSetupId, ownerUserId, boardLayout, handsLayout, selectedPieceIds, status }`
+- Purpose:
+  - `matching_server.shogi` が match 開始時に取得する
+
+### `POST /api/v1/online-match/battle-setup/:battleSetupId/lock`
+- Planned success `200`: `data = { battleSetupId: string, status: "locked" }`
+- Purpose:
+  - match 開始前に編集を凍結する
+
 ### `GET /api/v1/deck`
 - Success `200`: `data = DeckSnapshot`
 - Errors:

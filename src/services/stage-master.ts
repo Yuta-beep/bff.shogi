@@ -259,7 +259,7 @@ async function applyStage39OniVariants(placementRows: any[]): Promise<void> {
       const piece = Array.isArray(row?.m_piece) ? row.m_piece[0] : row?.m_piece;
       return row?.side === 'enemy' && piece?.kanji === '鬼';
     })
-    .sort((a, b) => (a.col_no - b.col_no) || (a.row_no - b.row_no));
+    .sort((a, b) => a.col_no - b.col_no || a.row_no - b.row_no);
 
   if (enemyOniRows.length < 2) return;
 
