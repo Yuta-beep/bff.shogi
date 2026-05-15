@@ -1,0 +1,11 @@
+---
+description: コード編集の対象リポジトリを app.shogi と bff.shogi に限定する
+alwaysApply: true
+---
+
+# 編集スコープ
+
+- ソースコード・設定の**変更・追加・削除**は、原則として次の2リポジトリ内だけに行う。
+  - `app.shogi`
+  - `bff.shogi`（本リポジトリ）
+- `shogi_game` やその他のパスにある HTML レガシー等は**触らない**。同等の変更が必要なら、`app.shogi` / `bff.shogi` 側の正規の実装を探してから対応する。

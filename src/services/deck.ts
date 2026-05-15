@@ -18,6 +18,7 @@ function deckSnapshotCharFromMeta(meta: {
   return (meta.kanji ?? '').trim();
 }
 
+/** デッキの盤面配置は app.shogi のマイデッキ作成（タップ／ドラッグ編集）から保存 API で書き込まれる BFF 入出力の対象。 */
 export type OwnedPieceRow = {
   pieceId: number;
   char: string;
