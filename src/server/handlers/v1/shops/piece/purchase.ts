@@ -1,5 +1,7 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { MOCK_SHOP_ITEMS } from '@/server/mocks/shop';
+import { purchasePieceShopItem, type ShopItemKey } from '@/services/shop';
 
 type PurchaseBody = {
   itemKey?: string;
@@ -10,6 +12,30 @@ type PurchaseBody = {
 
 export function optionsPieceShopPurchase() {
   return optionsResponse();
+}
+
+async function resolveUserId(req: Request): Promise<string | null> {
+  const auth = req.headers.get('Authorization') ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return null;
+
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user.id;
+}
+
+function mapPurchaseError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message === 'INSUFFICIENT_CURRENCY') {
+    return jsonError('INSUFFICIENT_CURRENCY', '通貨が足りません', 400);
+  }
+  if (message === 'ALREADY_OWNED') {
+    return jsonError('ALREADY_OWNED', 'すでに購入済みです', 409);
+  }
+  if (message === 'ITEM_NOT_FOUND' || message.startsWith('SHOP_PIECE_NOT_CONFIGURED')) {
+    return jsonError('ITEM_NOT_FOUND', '商品が見つかりません', 404);
+  }
+  return jsonError('INTERNAL_ERROR', message, 500);
 }
 
 export async function postPieceShopPurchase(req: Request) {
@@ -30,9 +56,15 @@ export async function postPieceShopPurchase(req: Request) {
     return jsonError('ITEM_NOT_FOUND', `Unknown shop item: ${requestedKey}`, 404);
   }
 
-  return jsonOk({
-    success: false,
-    reason: 'UI_ONLY' as const,
-    note: 'TEMP_MOCK_NO_CURRENCY_OR_OWNERSHIP_TABLE',
-  });
+  const userId = await resolveUserId(req);
+  if (!userId) {
+    return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+  }
+
+  try {
+    const result = await purchasePieceShopItem(userId, requestedKey as ShopItemKey);
+    return jsonOk(result);
+  } catch (error: unknown) {
+    return mapPurchaseError(error);
+  }
 }

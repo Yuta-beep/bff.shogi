@@ -11,6 +11,8 @@ describe('GET /api/v1/shops/piece/catalog', () => {
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
     expect(Array.isArray(payload.data.items)).toBe(true);
-    expect(payload.data).toHaveProperty('note', 'TEMP_MOCK_NO_CURRENCY_TABLE');
+    expect(payload.data).toHaveProperty('note', 'GUEST_ZERO_WALLET');
+    expect(typeof payload.data.pawnCurrency).toBe('number');
+    expect(typeof payload.data.goldCurrency).toBe('number');
   });
 });

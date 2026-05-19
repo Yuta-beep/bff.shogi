@@ -1,15 +1,45 @@
-import { jsonOk, optionsResponse } from '@/lib/http';
-import { MOCK_SHOP_CURRENCY, MOCK_SHOP_ITEMS, MOCK_SHOP_OWNED } from '@/server/mocks/shop';
+import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import {
+  getPieceShopCatalogForGuest,
+  getPieceShopCatalog as loadPieceShopCatalog,
+} from '@/services/shop';
 
 export function optionsPieceShopCatalog() {
   return optionsResponse();
 }
 
-export async function getPieceShopCatalog() {
-  return jsonOk({
-    items: MOCK_SHOP_ITEMS,
-    ...MOCK_SHOP_CURRENCY,
-    owned: MOCK_SHOP_OWNED,
-    note: 'TEMP_MOCK_NO_CURRENCY_TABLE',
-  });
+async function resolveUserId(req: Request): Promise<string | null> {
+  const auth = req.headers.get('Authorization') ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return null;
+
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data.user) return null;
+  return data.user.id;
+}
+
+export async function getPieceShopCatalog(req: Request = new Request('http://localhost')) {
+  const userId = await resolveUserId(req);
+
+  try {
+    if (!userId) {
+      const guest = await getPieceShopCatalogForGuest();
+      return jsonOk({
+        ...guest,
+        note: 'GUEST_ZERO_WALLET',
+      });
+    }
+
+    const snapshot = await loadPieceShopCatalog(userId);
+    return jsonOk({
+      ...snapshot,
+      note: 'PLAYER_WALLET',
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to load shop catalog';
+    console.error('[shop/catalog]', message, error);
+    return jsonError('INTERNAL_ERROR', message, 500);
+  }
 }

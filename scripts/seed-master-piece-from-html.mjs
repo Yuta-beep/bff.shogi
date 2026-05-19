@@ -218,7 +218,14 @@ const KNOWN_MOVE_DEFS = {
       [1, 1, 1, false, false],
     ],
   },
-  run: { isRepeatable: true, canJump: false, vectors: [[0, -1, 2, false, false]] },
+  run: {
+    isRepeatable: false,
+    canJump: false,
+    vectors: [
+      [0, -1, 1, false, false],
+      [0, -2, 1, false, false],
+    ],
+  },
   p: {
     isRepeatable: false,
     canJump: false,

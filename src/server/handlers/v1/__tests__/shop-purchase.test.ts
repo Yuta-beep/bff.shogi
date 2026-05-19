@@ -14,6 +14,16 @@ describe('POST /api/v1/shops/piece/purchase', () => {
     expect(payload.error.code).toBe('INVALID_JSON');
   });
 
+  it('returns UNAUTHORIZED without bearer token', async () => {
+    const response = await postPieceShopPurchase(
+      jsonRequest('http://localhost/api/v1/shops/piece/purchase', { itemKey: '走' }),
+    );
+    const payload = await readJson(response);
+
+    expect(response.status).toBe(401);
+    expect(payload.error.code).toBe('UNAUTHORIZED');
+  });
+
   it('returns ITEM_NOT_FOUND for unknown key', async () => {
     const response = await postPieceShopPurchase(
       jsonRequest('http://localhost/api/v1/shops/piece/purchase', { itemKey: 'unknown' }),

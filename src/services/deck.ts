@@ -49,6 +49,21 @@ export type DeckSnapshot = {
   decks: DeckRow[];
 };
 
+/** ショップ購入駒を一覧先頭（新しい shop ほど前）に並べる */
+export function sortOwnedPiecesForDeckBuilder(pieces: OwnedPieceRow[]): OwnedPieceRow[] {
+  const shopPieces = pieces
+    .filter((piece) => piece.source === 'shop')
+    .sort(
+      (a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime(),
+    );
+  const otherPieces = pieces
+    .filter((piece) => piece.source !== 'shop')
+    .sort(
+      (a, b) => new Date(a.acquiredAt).getTime() - new Date(b.acquiredAt).getTime(),
+    );
+  return [...shopPieces, ...otherPieces];
+}
+
 export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   const [ownedRes, decksRes] = await Promise.all([
     supabaseAdmin
@@ -144,17 +159,19 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
     }
   }
 
-  const ownedPieces: OwnedPieceRow[] = ownedRows.map((row) => {
-    const meta = pieceById.get(row.piece_id);
-    return {
-      pieceId: row.piece_id,
-      char: meta ? deckSnapshotCharFromMeta(meta) : '',
-      name: meta?.name ?? '',
-      quantity: row.quantity ?? 1,
-      acquiredAt: row.acquired_at,
-      source: row.source,
-    };
-  });
+  const ownedPieces: OwnedPieceRow[] = sortOwnedPiecesForDeckBuilder(
+    ownedRows.map((row) => {
+      const meta = pieceById.get(row.piece_id);
+      return {
+        pieceId: row.piece_id,
+        char: meta ? deckSnapshotCharFromMeta(meta) : '',
+        name: meta?.name ?? '',
+        quantity: row.quantity ?? 1,
+        acquiredAt: row.acquired_at,
+        source: row.source,
+      };
+    }),
+  );
 
   const decks: DeckRow[] = deckRows.map((row) => ({
     deckId: row.deck_id,
