@@ -161,8 +161,13 @@ function formatRareRateText(rates: ActiveGacha['rates']): string {
   return `R ${formatRatePercent(rates.R)} / SR ${formatRatePercent(rates.SR)} / UR ${formatRatePercent(rates.UR)} / SSR ${formatRatePercent(rates.SSR)}`;
 }
 
-/** gacha_room.html の並び（うかんむり → ひへん → しんにょう → 漢検） */
-const GACHA_LOBBY_DISPLAY_ORDER: string[] = ['ukanmuri', 'hiHen', 'shinnyo', 'kanken1'];
+/** gacha_room.html の並び（うかんむり → ひへん → しんにょう → 漢検）— DB の gacha_code */
+const GACHA_LOBBY_DISPLAY_ORDER: string[] = ['ukanmuri', 'hihen', 'shinnyo', 'kanken1'];
+
+function normalizeGachaCode(code: string): string {
+  if (code === 'hiHen') return 'hihen';
+  return code;
+}
 
 function formatPieceRateLine(pieces: ActiveGacha['pieces']): string {
   const total = pieces.reduce((sum, p) => sum + Math.max(0, p.weight), 0);
@@ -394,7 +399,8 @@ async function grantOwnedPiece(
 }
 
 export async function rollGacha(userId: string, gachaCode: string): Promise<RollGachaResult> {
-  const gacha = (await loadActiveGachasWithPieces()).find((x) => x.gachaCode === gachaCode);
+  const normalized = normalizeGachaCode(gachaCode.trim());
+  const gacha = (await loadActiveGachasWithPieces()).find((x) => x.gachaCode === normalized);
   if (!gacha) throw new Error('Gacha not found or unavailable');
   if (gacha.pieces.length === 0) throw new Error('No pieces configured for gacha');
   await spendGachaCost(userId, { pawn: gacha.costs.pawn, gold: gacha.costs.gold });
