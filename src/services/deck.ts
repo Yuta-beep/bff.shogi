@@ -1,5 +1,12 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+/** デッキビルダーに出さない駒（未実装の漢検1級旧枠） */
+const DECK_BUILDER_EXCLUDED_KANJI = new Set(['殲', '賚']);
+
+function isExcludedFromDeckBuilder(char: string): boolean {
+  return DECK_BUILDER_EXCLUDED_KANJI.has(char);
+}
+
 /** マスタの kanji が空・誤字でも、deck_builder.html 準拠の配置ルール用に一字を揃える */
 function deckSnapshotCharFromMeta(meta: {
   kanji: string;
@@ -160,17 +167,19 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   }
 
   const ownedPieces: OwnedPieceRow[] = sortOwnedPiecesForDeckBuilder(
-    ownedRows.map((row) => {
-      const meta = pieceById.get(row.piece_id);
-      return {
-        pieceId: row.piece_id,
-        char: meta ? deckSnapshotCharFromMeta(meta) : '',
-        name: meta?.name ?? '',
-        quantity: row.quantity ?? 1,
-        acquiredAt: row.acquired_at,
-        source: row.source,
-      };
-    }),
+    ownedRows
+      .map((row) => {
+        const meta = pieceById.get(row.piece_id);
+        return {
+          pieceId: row.piece_id,
+          char: meta ? deckSnapshotCharFromMeta(meta) : '',
+          name: meta?.name ?? '',
+          quantity: row.quantity ?? 1,
+          acquiredAt: row.acquired_at,
+          source: row.source,
+        };
+      })
+      .filter((piece) => !isExcludedFromDeckBuilder(piece.char)),
   );
 
   const decks: DeckRow[] = deckRows.map((row) => ({

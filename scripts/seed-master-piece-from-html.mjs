@@ -39,6 +39,8 @@ function loadLocalEnv() {
 }
 
 const htmlCandidates = [
+  path.resolve(backendRoot, '../shogi_game/piece_info.html'),
+  path.resolve(backendRoot, '../../shogi_game/piece_info.html'),
   path.resolve(backendRoot, '../../SHOGI_GAME/piece_info.html'),
   path.resolve(backendRoot, '../../../SHOGI_GAME/piece_info.html'),
 ];
@@ -95,6 +97,91 @@ function extractArrayLiteral(htmlText, constName) {
   throw new Error(`Could not parse array literal for ${constName}.`);
 }
 
+/** piece_info.html の move と DB master.m_move_pattern.move_code の差分 */
+const MOVE_CODE_ALIASES = {
+  run: 'shop_run',
+  seed: 'shop_tane',
+  kirin: 'shop_kirin',
+  dance: 'shop_mai',
+  cry: 'shop_naku',
+  bomb: 'move_gacha_baku',
+  muro: 'move_gacha_muro',
+  sadame: 'move_gacha_sadame',
+  gachaHen: 'move_gacha_hen',
+  itsu: 'move_gacha_itsu',
+  taunt: 'move_gacha_aori',
+  song: 'move_gacha_so',
+  grass: 'move_gacha_sou',
+  yan: 'move_gacha_en',
+  ko: 'move_gacha_ko',
+  lamp: 'lamp',
+  an: 'move_gacha_an',
+  advance: 'move_gacha_shin',
+  flee: 'move_gacha_to',
+};
+
+function resolveMoveCode(raw, piece) {
+  const move = raw ? String(raw).trim() : 'custom_unknown';
+  const kanji = piece?.char ? String(piece.char).trim() : '';
+  const unlock = piece?.unlock ? String(piece.unlock).trim() : '';
+
+  if (kanji === '逸') return 'move_gacha_itsu';
+  if (kanji === '辺') return 'move_gacha_hen';
+  if (kanji === '定') return 'move_gacha_sadame';
+  if (kanji === '室') return 'move_gacha_muro';
+  if (kanji === 'P' && unlock === 'ショップ') return 'shop_p';
+  if (kanji === 'P' && unlock === 'ガチャ') return 'move_gacha_sadame';
+  if (kanji === '爆') return 'move_gacha_baku';
+
+  return MOVE_CODE_ALIASES[move] ?? move;
+}
+
+function parseGachaPieceInfoFromHtml(htmlText) {
+  const marker = 'const gachaPieceInfo = {';
+  const start = htmlText.indexOf(marker);
+  if (start < 0) return [];
+
+  const braceStart = htmlText.indexOf('{', start);
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+
+  for (let i = braceStart; i < htmlText.length; i += 1) {
+    const ch = htmlText[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (!inDouble && ch === "'") inSingle = !inSingle;
+    else if (!inSingle && ch === '"') inDouble = !inDouble;
+    if (inSingle || inDouble) continue;
+
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        const objectLiteral = htmlText.slice(braceStart, i + 1);
+        const info = Function(`"use strict"; return (${objectLiteral});`)();
+        return Object.entries(info).map(([char, row]) => ({
+          char,
+          name: row.name,
+          unlock: row.unlock ?? 'ガチャ',
+          desc: row.desc,
+          skill: row.skill,
+          move: row.move,
+        }));
+      }
+    }
+  }
+
+  return [];
+}
+
 function parsePiecesFromHtml(htmlPath) {
   const htmlText = fs.readFileSync(htmlPath, 'utf8');
   const arrayLiteral = extractArrayLiteral(htmlText, 'ALL_PIECES_DATA');
@@ -104,14 +191,27 @@ function parsePiecesFromHtml(htmlPath) {
     throw new Error('Parsed ALL_PIECES_DATA is not an array.');
   }
 
-  return parsed
+  const fromCatalog = parsed
     .filter((p) => p && typeof p === 'object' && p.char && p.name)
     .map((p) => ({
       kanji: String(p.char).trim(),
       name: String(p.name).trim(),
-      moveCode: p.move ? String(p.move).trim() : 'custom_unknown',
+      moveCode: resolveMoveCode(p.move, p),
       skillDesc: p.skill ? String(p.skill).trim() : null,
+      unlock: p.unlock ? String(p.unlock).trim() : null,
     }));
+
+  const gachaExtras = parseGachaPieceInfoFromHtml(htmlText)
+    .filter((p) => p && p.char && p.name)
+    .map((p) => ({
+      kanji: String(p.char).trim(),
+      name: String(p.name).trim(),
+      moveCode: resolveMoveCode(p.move, p),
+      skillDesc: p.skill ? String(p.skill).trim() : null,
+      unlock: 'ガチャ',
+    }));
+
+  return [...fromCatalog, ...gachaExtras];
 }
 
 function normalizePieces(rawPieces) {

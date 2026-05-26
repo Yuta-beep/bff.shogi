@@ -105,11 +105,13 @@ async function request(pathname, { method = 'GET', query = '', body, prefer } = 
 
 function getShogiRoot() {
   const candidates = [
+    path.resolve(backendRoot, '../shogi_game'),
+    path.resolve(backendRoot, '../../shogi_game'),
     path.resolve(backendRoot, '../../SHOGI_GAME'),
     path.resolve(backendRoot, '../../../SHOGI_GAME'),
   ];
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
+    if (fs.existsSync(path.join(candidate, 'piece_info.html'))) return candidate;
   }
   return null;
 }

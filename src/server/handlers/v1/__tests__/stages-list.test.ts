@@ -42,7 +42,7 @@ describe('GET /api/v1/stages', () => {
             clearConditionType: 'defeat_boss',
             clearConditionParams: {},
             recommendedPower: null,
-            staminaCost: 0,
+            staminaCost: 5,
             canStart: true,
           },
         ],

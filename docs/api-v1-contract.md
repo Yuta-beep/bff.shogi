@@ -121,11 +121,27 @@
   - `500 INTERNAL_ERROR`
 
 ### `GET /api/v1/me/snapshot`
-- Success `200`: `data = { playerName, rating, pawnCurrency, goldCurrency, playerRank, playerExp }`
+- Success `200`: `data = { playerName, rating, pawnCurrency, goldCurrency, playerRank, playerExp, stamina, maxStamina, nextRecoveryAt }`
+- `rating`: 対人レート（新規プレイヤーは `0`）
 - Errors:
   - `401 UNAUTHORIZED`
   - `404 PLAYER_NOT_FOUND`
   - `500 INTERNAL_ERROR`
+
+### `POST /api/v1/me/pvp-rating/apply`
+- Body: `{ matchId: string, won: boolean }`
+- Success `200`: `data = { rating, delta, alreadyApplied }`
+- 勝利 `+50` / 敗北 `-30`（下限 0）。同一 `matchId` は冪等。
+- Errors:
+  - `401 UNAUTHORIZED`
+  - `400 INVALID_INPUT`
+  - `404 PLAYER_NOT_FOUND`
+  - `500 INTERNAL_ERROR`
+
+### `POST /api/v1/internal/pvp-rating/apply`（matching_server 専用）
+- Header: `x-matching-internal-token: <MATCHING_BFF_INTERNAL_TOKEN>`
+- Body: `{ userId, matchId, won }`
+- Success `200`: `data = { userId, rating, delta, alreadyApplied }`
 
 ### `GET /api/v1/shops/piece/catalog`
 - Success `200`: `data = { items, pawnCurrency, goldCurrency, owned, note }`

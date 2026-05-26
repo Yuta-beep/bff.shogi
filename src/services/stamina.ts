@@ -1,8 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// 5 stamina recovered every 10 minutes
-const STAMINA_PER_TICK = 5;
-const MS_PER_TICK = 10 * 60 * 1000;
+// 1 stamina recovered every 5 minutes
+const STAMINA_PER_TICK = 1;
+const MS_PER_TICK = 5 * 60 * 1000;
 
 export type PlayerStamina = {
   stamina: number;

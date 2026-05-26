@@ -1,0 +1,193 @@
+#!/usr/bin/env node
+/**
+ * 駒図鑑 (piece_info.html) から Supabase マイグレーションを生成する。
+ * - m_piece の upsert（未登録駒の追加・名称同期）
+ * - 全駒の公開（unpublished_at 解除）
+ * - image_key の更新（shogi_game の PNG ファイル名に基づく）
+ *
+ * Usage:
+ *   node scripts/generate-piece-catalog-sync-migration.mjs
+ *   node scripts/seed-master-piece-from-html.mjs   # seed_master_piece.sql も更新
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const backendRoot = path.resolve(__dirname, '..');
+
+const FILENAME_OVERRIDES = {
+  歩: '歩兵.png',
+  香: '香車.png',
+  桂: '桂馬.png',
+  銀: '銀将.png',
+  金: '金将.png',
+  玉: '王将.png',
+  王: '王将.png',
+  角: '角行.png',
+  飛: '飛車.png',
+  爆: '爆.png',
+  灯: '灯.png',
+  走: '走.png',
+  種: '種.png',
+  麒: '麒.png',
+  舞: '舞.png',
+  P: 'P.png',
+  鳴: '鳴.png',
+};
+
+const SHOP_IMAGE_BY_KANJI = {
+  走: '駒ショップ「走」.png',
+  種: '駒ショップ「種」.png',
+  麒: '駒ショップ「麒」.png',
+  舞: '駒ショップ「舞」.png',
+  P: '駒ショップ「P」.png',
+  鳴: '駒ショップ「鳴」.png',
+};
+
+const ONI_IMAGE_BY_NAME = {
+  赤鬼: '赤鬼.png',
+  青鬼: '青鬼.png',
+  黒鬼: '黒鬼.png',
+};
+
+function getShogiRoot() {
+  for (const candidate of [
+    path.resolve(backendRoot, '../shogi_game'),
+    path.resolve(backendRoot, '../../shogi_game'),
+  ]) {
+    if (fs.existsSync(path.join(candidate, 'piece_info.html'))) return candidate;
+  }
+  return null;
+}
+
+function escapeSql(value) {
+  if (value === null || value === undefined) return 'NULL';
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+function resolveImageFileName(entry, shogiRoot) {
+  const candidates = [];
+  if (SHOP_IMAGE_BY_KANJI[entry.kanji]) candidates.push(SHOP_IMAGE_BY_KANJI[entry.kanji]);
+  if (ONI_IMAGE_BY_NAME[entry.name]) candidates.push(ONI_IMAGE_BY_NAME[entry.name]);
+  if (FILENAME_OVERRIDES[entry.kanji]) candidates.push(FILENAME_OVERRIDES[entry.kanji]);
+  if (entry.name) candidates.push(`${entry.name}.png`);
+  candidates.push(`${entry.kanji}.png`);
+
+  for (const fileName of candidates) {
+    const fullPath = path.join(shogiRoot, fileName);
+    if (fs.existsSync(fullPath)) {
+      // Storage キーは ASCII のみ（Supabase 制約）
+      const imageKey = `pieces/piece-${entry.pieceId}.png`;
+      return { fileName, imageKey, fullPath };
+    }
+  }
+  return null;
+}
+
+function extractPieceUpsertSql() {
+  const seedPath = path.resolve(backendRoot, 'scripts/generated/seed_master_piece.sql');
+  const sql = fs.readFileSync(seedPath, 'utf8');
+  const start = sql.indexOf('insert into master.m_piece');
+  const end = sql.indexOf('commit;');
+  if (start < 0 || end < 0) {
+    throw new Error('m_piece insert block not found in seed_master_piece.sql — run seed-master-piece-from-html.mjs first');
+  }
+  return `${sql.slice(start, end).trim()};\n`;
+}
+
+function buildImageUpdateSql(dbPieces, shogiRoot) {
+  const lines = [];
+  const byKanji = new Map();
+  for (const row of dbPieces) {
+    if (!byKanji.has(row.kanji)) byKanji.set(row.kanji, row);
+  }
+
+  for (const [kanji, row] of byKanji) {
+    const file = resolveImageFileName(
+      { kanji, name: row.name, unlock: row.unlock, pieceId: row.piece_id },
+      shogiRoot,
+    );
+    if (!file) continue;
+
+    lines.push(
+      `update master.m_piece set image_source = 'supabase', image_bucket = 'piece-images', image_key = ${escapeSql(file.imageKey)}, image_version = coalesce(image_version, 1), is_active = true, unpublished_at = null, updated_at = now() where piece_id = ${row.piece_id};`,
+    );
+  }
+
+  return lines;
+}
+
+function parseCatalogKanjiFromSeedSql() {
+  const seedPath = path.resolve(backendRoot, 'scripts/generated/seed_master_piece.sql');
+  const sql = fs.readFileSync(seedPath, 'utf8');
+  const kanjiSet = new Set();
+  const re = /\('piece_[^']+',\s*'([^']+)',\s*'([^']+)'/g;
+  let match;
+  while ((match = re.exec(sql)) !== null) {
+    kanjiSet.add(match[1]);
+  }
+  return [...kanjiSet];
+}
+
+function main() {
+  const shogiRoot = getShogiRoot();
+  if (!shogiRoot) {
+    console.error('[error] shogi_game not found');
+    process.exitCode = 1;
+    return;
+  }
+
+  const regen = spawnSync(process.execPath, ['scripts/seed-master-piece-from-html.mjs'], {
+    cwd: backendRoot,
+    encoding: 'utf8',
+  });
+  if (regen.status !== 0) {
+    console.error(regen.stderr || regen.stdout);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(regen.stdout.trim());
+
+  const pieceUpsert = extractPieceUpsertSql();
+  const kanjiList = parseCatalogKanjiFromSeedSql();
+  // image_key は piece_id ベースのため、マイグレーション適用後に apply-piece-catalog-image-keys.mjs で Storage 同期
+  const imageLines = [
+    '-- image_key / Storage は scripts/apply-piece-catalog-image-keys.mjs --apply で同期（ASCII キー: pieces/piece-{id}.png）',
+  ];
+  const publishIn = kanjiList.map((k) => escapeSql(k)).join(', ');
+
+  const migration = `-- 駒図鑑 (piece_info.html) に合わせて master.m_piece を同期
+-- Generated by scripts/generate-piece-catalog-sync-migration.mjs
+
+begin;
+
+-- 未登録駒の upsert（名称・move_pattern 同期）
+${pieceUpsert}
+
+-- 図鑑掲載駒を公開
+update master.m_piece
+set
+  is_active = true,
+  unpublished_at = null,
+  published_at = coalesce(published_at, now()),
+  updated_at = now()
+where kanji in (${publishIn});
+
+-- 駒画像パス（Storage: piece-images バケット）
+${imageLines.join('\n')}
+
+commit;
+`;
+
+  const outPath = path.resolve(
+    backendRoot,
+    'supabase/migrations/20260526120000_sync_piece_catalog_from_html.sql',
+  );
+  fs.writeFileSync(outPath, migration, 'utf8');
+  console.log(`[ok] Wrote migration (${imageLines.length} image updates, ${kanjiList.length} kanji):`);
+  console.log(`  ${outPath}`);
+}
+
+main();

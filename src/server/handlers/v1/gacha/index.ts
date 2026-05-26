@@ -20,6 +20,8 @@ export async function getGachaLobbyHandler(req: Request) {
 
 type RollBody = {
   gachaId?: unknown;
+  /** 0=白, 1=青, 2=赤, 3=金, 4=黒（ホームのガチャ玉表示と同期） */
+  gachaBallColorIndex?: unknown;
 };
 
 export async function postGachaRollHandler(req: Request) {
@@ -36,8 +38,13 @@ export async function postGachaRollHandler(req: Request) {
   const gachaId = typeof body.gachaId === 'string' ? body.gachaId.trim() : '';
   if (!gachaId) return jsonError('INVALID_INPUT', 'gachaId is required', 400);
 
+  const colorIndex =
+    typeof body.gachaBallColorIndex === 'number' && Number.isFinite(body.gachaBallColorIndex)
+      ? Math.floor(body.gachaBallColorIndex)
+      : 0;
+
   try {
-    const result = await rollGacha(userId, gachaId);
+    const result = await rollGacha(userId, gachaId, { gachaBallColorIndex: colorIndex });
     return jsonOk(result);
   } catch (error: any) {
     const message = String(error?.message ?? '');

@@ -24,7 +24,7 @@ describe('GET /api/v1/me/snapshot', () => {
       resolveUserId: async () => 'user-1',
       getPlayerSnapshot: async () => ({
         displayName: '将棋太郎',
-        rating: 1500,
+        rating: 0,
         pawnCurrency: 0,
         goldCurrency: 0,
         playerRank: 1,
@@ -42,7 +42,7 @@ describe('GET /api/v1/me/snapshot', () => {
       ok: true,
       data: {
         playerName: '将棋太郎',
-        rating: 1500,
+        rating: 0,
         pawnCurrency: 0,
         goldCurrency: 0,
         playerRank: 1,

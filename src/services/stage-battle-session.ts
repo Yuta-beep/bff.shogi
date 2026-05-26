@@ -158,7 +158,7 @@ export function createStartStageBattleSession(
 
     await expireOpenSessions(input.playerId);
 
-    const staminaCost = effectiveStageStaminaCost(stage.stamina_cost);
+    const staminaCost = effectiveStageStaminaCost(stage.stamina_cost, stage.stage_category);
     try {
       if (staminaCost > 0) {
         await deps.deductPlayerStamina(input.playerId, staminaCost);

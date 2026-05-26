@@ -1,5 +1,11 @@
 import { isPublishedNow } from '@/lib/time';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import {
+  effectiveGachaPieceWeight,
+  isGachaCurrencyChar,
+  normalizeGachaBallColorIndex,
+} from '@/lib/gacha-ball-piece-rate';
+import { clearPieceCatalogCache } from '@/services/piece-master';
 
 type GachaRow = {
   gacha_id: number;
@@ -142,7 +148,10 @@ function toNumber(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function pickWeightedRandom<T>(items: T[], getWeight: (item: T) => number): T {
+export function pickWeightedRandom<T>(items: T[], getWeight: (item: T) => number): T {
+  if (items.length === 0) {
+    throw new Error('pickWeightedRandom: empty items');
+  }
   const total = items.reduce((sum, item) => sum + Math.max(0, getWeight(item)), 0);
   if (total <= 0) return items[0];
   let r = Math.random() * total;
@@ -151,6 +160,37 @@ function pickWeightedRandom<T>(items: T[], getWeight: (item: T) => number): T {
     if (r <= 0) return item;
   }
   return items[items.length - 1];
+}
+
+/** 表示用: 重みからレアリティ別の実効排出率を算出 */
+export function computeOutcomeRatesFromWeights(
+  pieces: Array<{ char: string; rarity: string; weight: number }>,
+): ActiveGacha['rates'] {
+  const total = pieces.reduce((sum, piece) => sum + Math.max(0, piece.weight), 0);
+  if (total <= 0) {
+    return { N: 0, R: 0, SR: 0, UR: 0, SSR: 0 };
+  }
+
+  const rates: ActiveGacha['rates'] = { N: 0, R: 0, SR: 0, UR: 0, SSR: 0 };
+  for (const piece of pieces) {
+    const share = Math.max(0, piece.weight) / total;
+    if (isGachaCurrencyChar(piece.char)) {
+      rates.N += share;
+      continue;
+    }
+    const rarity = piece.rarity.toUpperCase();
+    if (rarity === 'R') rates.R += share;
+    else if (rarity === 'SR') rates.SR += share;
+    else if (rarity === 'UR') rates.UR += share;
+    else if (rarity === 'SSR') rates.SSR += share;
+  }
+  return rates;
+}
+
+function pawnRewardForCurrencyRoll(gachaCode: string): number {
+  if (gachaCode === 'kanken1') return 5;
+  if (gachaCode === 'ukanmuri' || gachaCode === 'hihen' || gachaCode === 'shinnyo') return 2;
+  return 1;
 }
 
 function formatRatePercent(rate: number): string {
@@ -186,17 +226,6 @@ function sortLobbyBanners(banners: GachaLobbyBanner[]): GachaLobbyBanner[] {
     if (ib === -1) return -1;
     return ia - ib;
   });
-}
-
-function rollRarity(rates: ActiveGacha['rates']): 'N' | 'R' | 'SR' | 'UR' | 'SSR' {
-  const pool = [
-    { rarity: 'N' as const, rate: Math.max(0, rates.N) },
-    { rarity: 'R' as const, rate: Math.max(0, rates.R) },
-    { rarity: 'SR' as const, rate: Math.max(0, rates.SR) },
-    { rarity: 'UR' as const, rate: Math.max(0, rates.UR) },
-    { rarity: 'SSR' as const, rate: Math.max(0, rates.SSR) },
-  ];
-  return pickWeightedRandom(pool, (x) => x.rate).rarity;
 }
 
 async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {
@@ -290,10 +319,11 @@ export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot>
 
   const banners: GachaLobbyBanner[] = [];
   for (const gacha of gachas) {
+    const displayRates = computeOutcomeRatesFromWeights(gacha.pieces);
     banners.push({
       key: gacha.gachaCode,
       name: gacha.gachaName,
-      rareRateText: formatRareRateText(gacha.rates),
+      rareRateText: formatRareRateText(displayRates),
       pieceRateText: formatPieceRateLine(gacha.pieces),
       description: null,
       lineup: gacha.pieces.map((p) => ({
@@ -398,33 +428,50 @@ async function grantOwnedPiece(
   return { alreadyOwned: true };
 }
 
-export async function rollGacha(userId: string, gachaCode: string): Promise<RollGachaResult> {
+export async function rollGacha(
+  userId: string,
+  gachaCode: string,
+  options?: { gachaBallColorIndex?: number },
+): Promise<RollGachaResult> {
   const normalized = normalizeGachaCode(gachaCode.trim());
   const gacha = (await loadActiveGachasWithPieces()).find((x) => x.gachaCode === normalized);
   if (!gacha) throw new Error('Gacha not found or unavailable');
   if (gacha.pieces.length === 0) throw new Error('No pieces configured for gacha');
   await spendGachaCost(userId, { pawn: gacha.costs.pawn, gold: gacha.costs.gold });
 
-  const rarity = rollRarity(gacha.rates);
-  if (rarity === 'N') {
-    const wallet = await addPlayerCurrency(userId, { pawn: 1, gold: 0 });
+  const colorIndex = normalizeGachaBallColorIndex(options?.gachaBallColorIndex);
+  const picked = pickWeightedRandom(gacha.pieces, (item) =>
+    effectiveGachaPieceWeight(item.char, item.weight, colorIndex),
+  );
+
+  if (picked.char === '歩') {
+    const pawnAmount = pawnRewardForCurrencyRoll(gacha.gachaCode);
+    const wallet = await addPlayerCurrency(userId, { pawn: pawnAmount, gold: 0 });
     return {
       type: 'miss',
       currency: 'pawn',
+      amount: pawnAmount,
+      pawnCurrency: wallet.pawnCurrency,
+      goldCurrency: wallet.goldCurrency,
+    };
+  }
+
+  if (picked.char === '金') {
+    const wallet = await addPlayerCurrency(userId, { pawn: 0, gold: 1 });
+    return {
+      type: 'miss',
+      currency: 'gold',
       amount: 1,
       pawnCurrency: wallet.pawnCurrency,
       goldCurrency: wallet.goldCurrency,
     };
   }
 
-  const candidates = gacha.pieces.filter((piece) => piece.rarity === rarity);
-  const pool = candidates.length > 0 ? candidates : gacha.pieces;
-  const picked = pickWeightedRandom(pool, (item) => item.weight);
-
   const [{ alreadyOwned }, wallet] = await Promise.all([
     grantOwnedPiece(userId, picked.pieceId),
     getPlayerWallet(userId),
   ]);
+  clearPieceCatalogCache();
 
   return {
     type: 'hit',

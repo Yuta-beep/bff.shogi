@@ -35,7 +35,7 @@ export async function getPlayerSnapshot(userId: string): Promise<PlayerSnapshot 
 
   return {
     displayName: (data.display_name as string | null) ?? null,
-    rating: Number(data.rating ?? 1500),
+    rating: Math.max(0, Math.floor(Number(data.rating ?? 0))),
     pawnCurrency: Number(data.pawn_currency ?? 0),
     goldCurrency: Number(data.gold_currency ?? 0),
     playerRank: Number(data.player_rank ?? 1),

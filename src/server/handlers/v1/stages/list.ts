@@ -25,7 +25,7 @@ export function createGetStageList(deps: StageListDeps = { listPublishedStages }
           clearConditionType: row.clear_condition_type ?? 'defeat_boss',
           clearConditionParams: row.clear_condition_params ?? {},
           recommendedPower: row.recommended_power ?? null,
-          staminaCost: effectiveStageStaminaCost(row.stamina_cost),
+          staminaCost: effectiveStageStaminaCost(row.stamina_cost, row.stage_category),
           canStart: true,
         })),
         note: 'NO_USER_PROGRESS_TABLE_YET',

@@ -13,6 +13,12 @@ let cachedPieceCatalog: Awaited<ReturnType<typeof buildPieceCatalog>> | null = n
 let cachedPieceCatalogAt = 0;
 let pieceCatalogInFlight: Promise<Awaited<ReturnType<typeof buildPieceCatalog>>> | null = null;
 
+export function clearPieceCatalogCache(): void {
+  cachedPieceCatalog = null;
+  cachedPieceCatalogAt = 0;
+  pieceCatalogInFlight = null;
+}
+
 export async function listPieceCatalog() {
   const now = Date.now();
   if (cachedPieceCatalog && now - cachedPieceCatalogAt < PIECE_CATALOG_TTL_MS) {

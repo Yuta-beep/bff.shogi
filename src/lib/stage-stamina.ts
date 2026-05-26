@@ -1,12 +1,19 @@
+/** ノーマルダンジョン1回のスタミナ消費 */
+export const NORMAL_DUNGEON_STAMINA_COST = 5;
+
 /**
  * `true` のとき `master.m_stage.stamina_cost` を無視する。
- * 入室時のスタミナ消費を行わず、ステージ一覧の `staminaCost` も常に 0 を返す。
- * DB マイグレーション未適用でも無料入室できるようにする。
- * マスタ値に戻す場合は `false` に変更する。
+ * 本番は `false`（ノーマルダンジョンでスタミナ5消費）。
  */
-export const STAGE_STAMINA_IGNORE_MASTER = true;
+export const STAGE_STAMINA_IGNORE_MASTER = false;
 
-export function effectiveStageStaminaCost(masterStaminaCost: number | null | undefined): number {
+export function effectiveStageStaminaCost(
+  masterStaminaCost: number | null | undefined,
+  stageCategory?: string | null,
+): number {
   if (STAGE_STAMINA_IGNORE_MASTER) return 0;
-  return Number(masterStaminaCost ?? 0);
+  const fromMaster = Number(masterStaminaCost ?? 0);
+  if (fromMaster > 0) return fromMaster;
+  if ((stageCategory ?? 'normal') === 'normal') return NORMAL_DUNGEON_STAMINA_COST;
+  return 0;
 }
