@@ -4,7 +4,7 @@
 create table if not exists public.players (
   id              uuid        primary key references auth.users(id) on delete cascade,
   display_name    text        not null default '将棋プレイヤー',
-  rating          int         not null default 1500,
+  rating          int         not null default 0,
   pawn_currency   int         not null default 0,
   gold_currency   int         not null default 0,
   is_anonymous    boolean     not null default true,

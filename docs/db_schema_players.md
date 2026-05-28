@@ -16,7 +16,7 @@
 |---|---|---|---|
 | `id` | `uuid` | PK, FK -> `auth.users(id)` ON DELETE CASCADE | AuthユーザーID |
 | `display_name` | `text` | NULL許容 | プレイヤー表示名 |
-| `rating` | `int` | NOT NULL, DEFAULT 1500 | レーティング |
+| `rating` | `int` | NOT NULL, DEFAULT 0 | 対人レート（新規は 0 から開始） |
 | `pawn_currency` | `int` | NOT NULL, DEFAULT 0 | 歩通貨 |
 | `gold_currency` | `int` | NOT NULL, DEFAULT 0 | 金通貨 |
 | `is_anonymous` | `boolean` | NOT NULL, DEFAULT true | 匿名ユーザー状態 |

@@ -1,3 +1,4 @@
+import { computeStageClearCurrencyGrant } from '@/lib/stage-clear-currency-reward';
 import { isPublishedNow } from '@/lib/time';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getStageByNo } from '@/services/stage-master';
@@ -224,10 +225,10 @@ async function grantOwnedPieces(
     .filter((row) => row.quantity > 0);
 }
 
-async function loadStageRewards(
+async function loadStagePieceRewards(
   stageId: number,
   timings: RewardTiming[],
-): Promise<{ pawn: number; gold: number; pieceQuantities: Map<number, number> }> {
+): Promise<Map<number, number>> {
   const { data, error } = await supabaseAdmin
     .schema('master')
     .from('m_stage_reward')
@@ -241,8 +242,6 @@ async function loadStageRewards(
 
   if (error) throw error;
 
-  let pawn = 0;
-  let gold = 0;
   const pieceQuantities = new Map<number, number>();
 
   for (const row of (data ?? []) as unknown as StageRewardJoinRow[]) {
@@ -250,23 +249,16 @@ async function loadStageRewards(
 
     const reward = toRewardRow(row);
     if (!reward || !reward.is_active || !isPublishedNow(reward as any)) continue;
+    if (reward.reward_type !== 'piece' || typeof reward.piece_id !== 'number') continue;
 
     const qty = Math.max(0, Number(row.quantity ?? 0));
     if (qty <= 0) continue;
 
-    if (reward.reward_type === 'currency') {
-      if (reward.item_code === 'pawn') pawn += qty;
-      if (reward.item_code === 'gold') gold += qty;
-      continue;
-    }
-
-    if (reward.reward_type === 'piece' && typeof reward.piece_id === 'number') {
-      const current = pieceQuantities.get(reward.piece_id) ?? 0;
-      pieceQuantities.set(reward.piece_id, current + qty);
-    }
+    const current = pieceQuantities.get(reward.piece_id) ?? 0;
+    pieceQuantities.set(reward.piece_id, current + qty);
   }
 
-  return { pawn, gold, pieceQuantities };
+  return pieceQuantities;
 }
 
 export async function grantStageClearRewards(
@@ -282,12 +274,13 @@ export async function grantStageClearRewards(
   }
 
   const clearState = await markStageClear(userId, stage.stage_id);
+  const currencyGrant = computeStageClearCurrencyGrant(stageNo, clearState.firstClear);
   const timings: RewardTiming[] = clearState.firstClear ? ['first_clear', 'clear'] : ['clear'];
-  const rewardPlan = await loadStageRewards(stage.stage_id, timings);
+  const pieceQuantities = await loadStagePieceRewards(stage.stage_id, timings);
 
   const [wallet, grantedPieces] = await Promise.all([
-    addPlayerCurrency(userId, { pawn: rewardPlan.pawn, gold: rewardPlan.gold }),
-    grantOwnedPieces(userId, rewardPlan.pieceQuantities),
+    addPlayerCurrency(userId, currencyGrant),
+    grantOwnedPieces(userId, pieceQuantities),
   ]);
 
   return {
@@ -295,8 +288,8 @@ export async function grantStageClearRewards(
     firstClear: clearState.firstClear,
     clearCount: clearState.clearCount,
     granted: {
-      pawn: rewardPlan.pawn,
-      gold: rewardPlan.gold,
+      pawn: currencyGrant.pawn,
+      gold: currencyGrant.gold,
       pieces: grantedPieces,
     },
     wallet,
