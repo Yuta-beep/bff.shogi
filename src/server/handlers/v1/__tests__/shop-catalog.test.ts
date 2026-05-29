@@ -5,7 +5,9 @@ import { readJson } from './test-utils';
 
 describe('GET /api/v1/shops/piece/catalog', () => {
   it('returns fixed envelope with items and currency', async () => {
-    const response = await getPieceShopCatalog();
+    const response = await getPieceShopCatalog(
+      new Request('http://localhost/api/v1/shops/piece/catalog'),
+    );
     const payload = await readJson(response);
 
     expect(response.status).toBe(200);

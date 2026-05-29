@@ -5,11 +5,11 @@ import { computeOutcomeRatesFromWeights, pickWeightedRandom } from '@/services/g
 describe('gacha weighted pool', () => {
   it('computeOutcomeRatesFromWeights matches hihen HTML weights', () => {
     const rates = computeOutcomeRatesFromWeights([
-      { char: '歩', name: '', rarity: 'N', weight: 45 },
-      { char: '金', name: '', rarity: 'N', weight: 25 },
-      { char: '灯', name: '', rarity: 'R', weight: 15 },
-      { char: '煽', name: '', rarity: 'SR', weight: 10 },
-      { char: '爆', name: '', rarity: 'UR', weight: 5 },
+      { char: '歩', rarity: 'N', weight: 45 },
+      { char: '金', rarity: 'N', weight: 25 },
+      { char: '灯', rarity: 'R', weight: 15 },
+      { char: '煽', rarity: 'SR', weight: 10 },
+      { char: '爆', rarity: 'UR', weight: 5 },
     ]);
     expect(rates.N).toBeCloseTo(0.7, 4);
     expect(rates.R).toBeCloseTo(0.15, 4);

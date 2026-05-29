@@ -19,7 +19,7 @@ async function resolveUserId(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
-export async function getPieceShopCatalog(req: Request = new Request('http://localhost')) {
+export async function getPieceShopCatalog(req: Request) {
   const userId = await resolveUserId(req);
 
   try {

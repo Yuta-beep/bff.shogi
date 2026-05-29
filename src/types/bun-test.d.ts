@@ -6,6 +6,8 @@ declare module 'bun:test' {
     toBeDefined(): void;
     toEqual(expected: any): void;
     toContain(expected: any): void;
+    toBeCloseTo(expected: number, precision?: number): void;
+    toBeGreaterThan(expected: number): void;
     toBeGreaterThanOrEqual(expected: number): void;
     toHaveLength(expected: number): void;
     toHaveProperty(path: string, value?: any): void;
