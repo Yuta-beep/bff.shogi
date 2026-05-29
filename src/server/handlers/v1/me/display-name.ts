@@ -1,5 +1,5 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getPlayerDisplayName, upsertPlayerDisplayName } from '@/services/player-profile';
 
 export function optionsMeDisplayName() {
@@ -17,13 +17,7 @@ type PutMeDisplayNameDeps = {
 };
 
 async function resolveUserId(req: Request): Promise<string | null> {
-  const auth = req.headers.get('Authorization') ?? '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) return null;
-
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data.user) return null;
-  return data.user.id;
+  return resolveBearerUserId(req);
 }
 
 export function createGetMeDisplayName(
@@ -68,6 +62,9 @@ export function createPutMeDisplayName(
     const displayName = raw.trim();
     if (!displayName) {
       return jsonError('INVALID_INPUT', 'displayName is required', 400);
+    }
+    if (displayName.length > 20) {
+      return jsonError('INVALID_INPUT', 'displayName must be 20 characters or fewer', 400);
     }
 
     try {

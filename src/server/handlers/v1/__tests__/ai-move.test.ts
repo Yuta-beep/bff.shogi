@@ -8,6 +8,8 @@ import { invalidJsonRequest, jsonRequest, readJson } from './test-utils';
 describe('POST /api/v1/ai/move', () => {
   it('returns 400 for invalid JSON', async () => {
     const handler = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseAiMoveRequest: () => ({}) as any,
       executeAiTurn: async () => ({}) as any,
     });
@@ -20,6 +22,8 @@ describe('POST /api/v1/ai/move', () => {
 
   it('returns 200 with fixed envelope on success', async () => {
     const handler = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseAiMoveRequest: (body) => body as any,
       executeAiTurn: async () =>
         ({
@@ -84,6 +88,8 @@ describe('POST /api/v1/ai/move', () => {
 
   it('returns 200 with finished game when executeAiTurn detects checkmate', async () => {
     const handler = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseAiMoveRequest: (body) => body as any,
       executeAiTurn: async () =>
         ({
@@ -116,6 +122,8 @@ describe('POST /api/v1/ai/move', () => {
 
   it('maps validation and upstream errors deterministically', async () => {
     const validation = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseAiMoveRequest: () => {
         throw new AiMoveRequestValidationError('bad request');
       },
@@ -127,6 +135,8 @@ describe('POST /api/v1/ai/move', () => {
     expect(vPayload.error.code).toBe('INVALID_REQUEST');
 
     const badRequest = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseAiMoveRequest: (body) => body as any,
       executeAiTurn: async () => {
         throw new AiEngineHttpError(422, 'invalid payload');
@@ -138,6 +148,8 @@ describe('POST /api/v1/ai/move', () => {
     expect(bPayload.error.code).toBe('AI_ENGINE_BAD_REQUEST');
 
     const unreachable = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseAiMoveRequest: (body) => body as any,
       executeAiTurn: async () => {
         throw new AiEngineConnectionError('connect ECONNREFUSED');
@@ -147,5 +159,19 @@ describe('POST /api/v1/ai/move', () => {
     const uPayload = await readJson(uRes);
     expect(uRes.status).toBe(502);
     expect(uPayload.error.code).toBe('AI_ENGINE_UNREACHABLE');
+  });
+
+  it('returns 404 for non-owned game', async () => {
+    const handler = createPostAiMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => false,
+      parseAiMoveRequest: (body) => body as any,
+      executeAiTurn: async () => ({}) as any,
+    });
+    const response = await handler(
+      jsonRequest('http://localhost/api/v1/ai/move', { gameId: 'g', moveNo: 1 }),
+    );
+
+    expect(response.status).toBe(404);
   });
 });

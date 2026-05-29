@@ -1,11 +1,15 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import {
   parseGameMoveRequest,
   GameMoveRequestValidationError,
 } from '@/lib/game-move-request-parser';
+import { isGameOwnedBy } from '@/services/game-access';
 import { commitGameMove, CommitGameMoveError } from '@/services/game-move';
 
 type PostGameMoveDeps = {
+  resolveUserId: (req: Request) => Promise<string | null>;
+  isGameOwnedBy: typeof isGameOwnedBy;
   parseGameMoveRequest: typeof parseGameMoveRequest;
   commitGameMove: typeof commitGameMove;
 };
@@ -15,9 +19,23 @@ export function optionsGameMove() {
 }
 
 export function createPostGameMove(
-  deps: PostGameMoveDeps = { parseGameMoveRequest, commitGameMove },
+  deps: PostGameMoveDeps = {
+    resolveUserId: resolveBearerUserId,
+    isGameOwnedBy,
+    parseGameMoveRequest,
+    commitGameMove,
+  },
 ) {
   return async function postGameMove(gameId: string, req: Request) {
+    const userId = await deps.resolveUserId(req);
+    if (!userId) {
+      return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    }
+
+    if (!(await deps.isGameOwnedBy(gameId, userId))) {
+      return jsonError('NOT_FOUND', 'game not found', 404);
+    }
+
     let body: unknown;
     try {
       body = await req.json();

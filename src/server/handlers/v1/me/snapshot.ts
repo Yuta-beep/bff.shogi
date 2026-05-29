@@ -1,5 +1,5 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getPlayerSnapshot } from '@/services/player-profile';
 
 export function optionsMeSnapshot() {
@@ -12,13 +12,7 @@ type GetMeSnapshotDeps = {
 };
 
 async function resolveUserId(req: Request): Promise<string | null> {
-  const auth = req.headers.get('Authorization') ?? '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) return null;
-
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data.user) return null;
-  return data.user.id;
+  return resolveBearerUserId(req);
 }
 
 export function createGetMeSnapshot(

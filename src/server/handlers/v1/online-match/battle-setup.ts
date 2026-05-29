@@ -1,7 +1,9 @@
+import { isAuthorizedInternalRequest } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import {
   getBattleSetup,
   lockBattleSetup,
+  consumeBattleSetup,
   saveBattleSetup,
   validateBattleSetup,
   validatePayload,
@@ -16,6 +18,7 @@ type BattleSetupDeps = {
   validateBattleSetup: typeof validateBattleSetup;
   getBattleSetup: typeof getBattleSetup;
   lockBattleSetup: typeof lockBattleSetup;
+  consumeBattleSetup: typeof consumeBattleSetup;
 };
 
 const defaultDeps: BattleSetupDeps = {
@@ -24,6 +27,7 @@ const defaultDeps: BattleSetupDeps = {
   validateBattleSetup,
   getBattleSetup,
   lockBattleSetup,
+  consumeBattleSetup,
 };
 
 async function resolveBattleSetupUserId(req: Request, deps: BattleSetupDeps) {
@@ -34,7 +38,12 @@ async function resolveBattleSetupUserId(req: Request, deps: BattleSetupDeps) {
     // Internal server-to-server calls can skip end-user auth and identify the owner explicitly.
   }
   const internalUserId = req.headers.get('x-internal-user-id')?.trim();
+  if (internalUserId && !isAuthorizedInternal(req)) return null;
   return internalUserId || null;
+}
+
+function isAuthorizedInternal(req: Request): boolean {
+  return isAuthorizedInternalRequest(req);
 }
 
 type SaveBattleSetupBody = {
@@ -66,6 +75,14 @@ function parseSaveBody(body: SaveBattleSetupBody): ParsedSaveBattleSetupBody | R
       'boardLayout, handsLayout, selectedPieceIds are required',
       400,
     );
+  }
+  if (body.name != null) {
+    if (typeof body.name !== 'string') {
+      return jsonError('INVALID_INPUT', 'name must be a string', 400);
+    }
+    if (body.name.trim().length > 40) {
+      return jsonError('INVALID_INPUT', 'name must be 40 characters or fewer', 400);
+    }
   }
   try {
     validatePayload({
@@ -173,7 +190,28 @@ export function createPostBattleSetupLock(deps: BattleSetupDeps = defaultDeps) {
   };
 }
 
+export function createPostBattleSetupConsume(deps: BattleSetupDeps = defaultDeps) {
+  return async function postBattleSetupConsume(
+    req: Request,
+    context: { params: Promise<{ battleSetupId: string }> },
+  ) {
+    const userId = await resolveBattleSetupUserId(req, deps);
+    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    const { battleSetupId } = await context.params;
+
+    try {
+      const setup = await deps.consumeBattleSetup(userId, battleSetupId);
+      return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
+    } catch (error: any) {
+      const message = error?.message ?? 'Failed to consume battle setup';
+      const status = message.includes('not found') ? 404 : 400;
+      return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
+    }
+  };
+}
+
 export const postBattleSetup = createPostBattleSetup();
 export const postBattleSetupValidate = createPostBattleSetupValidate();
 export const getBattleSetupHandler = createGetBattleSetup();
 export const postBattleSetupLock = createPostBattleSetupLock();
+export const postBattleSetupConsume = createPostBattleSetupConsume();

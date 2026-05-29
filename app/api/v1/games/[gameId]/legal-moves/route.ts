@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 export const OPTIONS = optionsGameLegalMoves;
 
-export async function GET(_req: Request, context: { params: Promise<{ gameId: string }> }) {
+export async function GET(req: Request, context: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await context.params;
-  return getGameLegalMoves(gameId);
+  return getGameLegalMoves(req, gameId);
 }

@@ -1,3 +1,5 @@
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
 type BattleSetupStatus = 'draft' | 'validated' | 'locked' | 'consumed';
 
 export type BattleSetupPlacement = {
@@ -36,7 +38,18 @@ export type BattleSetupRecord = {
   updatedAt: string;
 };
 
-const store = new Map<string, BattleSetupRecord>();
+type BattleSetupRow = {
+  battle_setup_id: string;
+  owner_user_id: string;
+  status: BattleSetupStatus;
+  name: string | null;
+  board_layout: BattleSetupPlacement[];
+  hands_layout: BattleSetupHandPiece[];
+  selected_piece_ids: number[];
+  validation_summary: BattleSetupRecord['validationSummary'];
+  created_at: string;
+  updated_at: string;
+};
 
 export async function saveBattleSetup(input: {
   ownerUserId: string;
@@ -45,6 +58,7 @@ export async function saveBattleSetup(input: {
   handsLayout: BattleSetupHandPiece[];
   selectedPieceIds: number[];
 }) {
+  validatePayload(input);
   const now = new Date().toISOString();
   const battleSetupId = `bsetup_${Math.random().toString(36).slice(2, 10)}`;
   const record: BattleSetupRecord = {
@@ -59,12 +73,13 @@ export async function saveBattleSetup(input: {
     createdAt: now,
     updatedAt: now,
   };
-  store.set(battleSetupId, record);
+  const { error } = await supabaseAdmin.from('online_match_battle_setups').insert(toRow(record));
+  if (error) throw error;
   return record;
 }
 
 export async function validateBattleSetup(ownerUserId: string, battleSetupId: string) {
-  const current = requireBattleSetup(ownerUserId, battleSetupId);
+  const current = await requireBattleSetup(ownerUserId, battleSetupId);
   validatePayload({
     boardLayout: current.boardLayout,
     handsLayout: current.handsLayout,
@@ -76,7 +91,12 @@ export async function validateBattleSetup(ownerUserId: string, battleSetupId: st
     validationSummary: summarize(current),
     updatedAt: new Date().toISOString(),
   };
-  store.set(battleSetupId, next);
+  const { error } = await supabaseAdmin
+    .from('online_match_battle_setups')
+    .update(toRowPatch(next))
+    .eq('battle_setup_id', battleSetupId)
+    .eq('owner_user_id', ownerUserId);
+  if (error) throw error;
   return next;
 }
 
@@ -85,7 +105,7 @@ export async function getBattleSetup(ownerUserId: string, battleSetupId: string)
 }
 
 export async function lockBattleSetup(ownerUserId: string, battleSetupId: string) {
-  const current = requireBattleSetup(ownerUserId, battleSetupId);
+  const current = await requireBattleSetup(ownerUserId, battleSetupId);
   if (current.status !== 'validated' && current.status !== 'locked') {
     throw new Error('Battle setup must be validated before lock');
   }
@@ -94,16 +114,48 @@ export async function lockBattleSetup(ownerUserId: string, battleSetupId: string
     status: 'locked',
     updatedAt: new Date().toISOString(),
   };
-  store.set(battleSetupId, next);
+  const { error } = await supabaseAdmin
+    .from('online_match_battle_setups')
+    .update(toRowPatch(next))
+    .eq('battle_setup_id', battleSetupId)
+    .eq('owner_user_id', ownerUserId);
+  if (error) throw error;
   return next;
 }
 
-function requireBattleSetup(ownerUserId: string, battleSetupId: string) {
-  const current = store.get(battleSetupId);
-  if (!current || current.ownerUserId !== ownerUserId) {
+export async function consumeBattleSetup(ownerUserId: string, battleSetupId: string) {
+  const current = await requireBattleSetup(ownerUserId, battleSetupId);
+  if (current.status !== 'locked' && current.status !== 'consumed') {
+    throw new Error('Battle setup must be locked before consume');
+  }
+  const next: BattleSetupRecord = {
+    ...current,
+    status: 'consumed',
+    updatedAt: new Date().toISOString(),
+  };
+  const { error } = await supabaseAdmin
+    .from('online_match_battle_setups')
+    .update(toRowPatch(next))
+    .eq('battle_setup_id', battleSetupId)
+    .eq('owner_user_id', ownerUserId);
+  if (error) throw error;
+  return next;
+}
+
+async function requireBattleSetup(ownerUserId: string, battleSetupId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('online_match_battle_setups')
+    .select('*')
+    .eq('battle_setup_id', battleSetupId)
+    .eq('owner_user_id', ownerUserId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) {
     throw new Error('Battle setup not found');
   }
-  return current;
+  return fromRow(data as BattleSetupRow);
 }
 
 function summarize(input: BattleSetupPayload) {
@@ -111,6 +163,49 @@ function summarize(input: BattleSetupPayload) {
     boardPieceCount: input.boardLayout.length,
     handPieceCount: input.handsLayout.reduce((sum, entry) => sum + Math.max(0, entry.count), 0),
     totalSelectedPieces: input.selectedPieceIds.length,
+  };
+}
+
+function toRow(record: BattleSetupRecord): BattleSetupRow {
+  return {
+    battle_setup_id: record.battleSetupId,
+    owner_user_id: record.ownerUserId,
+    status: record.status,
+    name: record.name,
+    board_layout: record.boardLayout,
+    hands_layout: record.handsLayout,
+    selected_piece_ids: record.selectedPieceIds,
+    validation_summary: record.validationSummary,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+  };
+}
+
+function toRowPatch(record: BattleSetupRecord) {
+  const row = toRow(record);
+  return {
+    status: row.status,
+    name: row.name,
+    board_layout: row.board_layout,
+    hands_layout: row.hands_layout,
+    selected_piece_ids: row.selected_piece_ids,
+    validation_summary: row.validation_summary,
+    updated_at: row.updated_at,
+  };
+}
+
+function fromRow(row: BattleSetupRow): BattleSetupRecord {
+  return {
+    battleSetupId: row.battle_setup_id,
+    ownerUserId: row.owner_user_id,
+    status: row.status,
+    name: row.name,
+    boardLayout: row.board_layout ?? [],
+    handsLayout: row.hands_layout ?? [],
+    selectedPieceIds: row.selected_piece_ids ?? [],
+    validationSummary: row.validation_summary,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

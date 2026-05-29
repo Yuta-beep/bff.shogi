@@ -1,3 +1,4 @@
+import { isAuthorizedInternalRequest } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { applyPvpRatingForUser } from '@/services/pvp-rating';
 
@@ -6,10 +7,7 @@ export function optionsInternalPvpRatingApply() {
 }
 
 function isAuthorizedInternal(req: Request): boolean {
-  const expected = (process.env.MATCHING_BFF_INTERNAL_TOKEN ?? '').trim();
-  if (!expected) return false;
-  const token = (req.headers.get('x-matching-internal-token') ?? '').trim();
-  return token.length > 0 && token === expected;
+  return isAuthorizedInternalRequest(req);
 }
 
 type ApplyBody = {

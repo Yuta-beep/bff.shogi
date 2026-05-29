@@ -1,9 +1,13 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { AiEngineConnectionError, AiEngineHttpError } from '@/lib/ai-engine-errors';
+import { isGameOwnedBy } from '@/services/game-access';
 import { CommitGameMoveError } from '@/services/game-move';
 import { loadGameLegalMoves } from '@/services/game-legal-moves';
 
 type GetGameLegalMovesDeps = {
+  resolveUserId: (req: Request) => Promise<string | null>;
+  isGameOwnedBy: typeof isGameOwnedBy;
   loadGameLegalMoves: typeof loadGameLegalMoves;
 };
 
@@ -11,8 +15,23 @@ export function optionsGameLegalMoves() {
   return optionsResponse();
 }
 
-export function createGetGameLegalMoves(deps: GetGameLegalMovesDeps = { loadGameLegalMoves }) {
-  return async function getGameLegalMoves(gameId: string) {
+export function createGetGameLegalMoves(
+  deps: GetGameLegalMovesDeps = {
+    resolveUserId: resolveBearerUserId,
+    isGameOwnedBy,
+    loadGameLegalMoves,
+  },
+) {
+  return async function getGameLegalMoves(req: Request, gameId: string) {
+    const userId = await deps.resolveUserId(req);
+    if (!userId) {
+      return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    }
+
+    if (!(await deps.isGameOwnedBy(gameId, userId))) {
+      return jsonError('NOT_FOUND', 'game not found', 404);
+    }
+
     try {
       const result = await deps.loadGameLegalMoves({ gameId });
       return jsonOk(result);

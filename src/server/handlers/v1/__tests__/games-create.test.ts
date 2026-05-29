@@ -7,6 +7,7 @@ import { invalidJsonRequest, jsonRequest, readJson } from './test-utils';
 describe('POST /api/v1/games', () => {
   it('returns 400 when body is invalid JSON', async () => {
     const handler = createPostCreateGame({
+      resolveUserId: async () => 'user-1',
       resolveStageId: async () => null,
       createGameSession: async () => ({ gameId: 'x', status: 'in_progress', startedAt: 'now' }),
     });
@@ -22,16 +23,15 @@ describe('POST /api/v1/games', () => {
 
   it('returns 200 and fixed envelope on success', async () => {
     const handler = createPostCreateGame({
+      resolveUserId: async () => 'user-1',
       resolveStageId: async () => 10,
-      createGameSession: async () => ({
+      createGameSession: async (input) => ({
         gameId: 'game-1',
         status: 'in_progress',
         startedAt: '2026-03-10T00:00:00.000Z',
       }),
     });
-    const response = await handler(
-      jsonRequest('http://localhost/api/v1/games', { playerId: 'u-1' }),
-    );
+    const response = await handler(jsonRequest('http://localhost/api/v1/games', {}));
     const payload = await readJson(response);
 
     expect(response.status).toBe(200);
@@ -47,14 +47,13 @@ describe('POST /api/v1/games', () => {
 
   it('maps CreateGameSessionError to error code', async () => {
     const handler = createPostCreateGame({
+      resolveUserId: async () => 'user-1',
       resolveStageId: async () => null,
       createGameSession: async () => {
         throw new CreateGameSessionError('CREATE_GAME_FAILED', 'db failed');
       },
     });
-    const response = await handler(
-      jsonRequest('http://localhost/api/v1/games', { playerId: 'u-1' }),
-    );
+    const response = await handler(jsonRequest('http://localhost/api/v1/games', {}));
     const payload = await readJson(response);
 
     expect(response.status).toBe(500);
@@ -62,5 +61,15 @@ describe('POST /api/v1/games', () => {
       ok: false,
       error: { code: 'CREATE_GAME_FAILED', message: 'db failed' },
     });
+  });
+
+  it('returns 401 without auth', async () => {
+    const handler = createPostCreateGame({
+      resolveUserId: async () => null,
+      resolveStageId: async () => null,
+      createGameSession: async () => ({ gameId: 'x', status: 'in_progress', startedAt: 'now' }),
+    });
+    const response = await handler(jsonRequest('http://localhost/api/v1/games', {}));
+    expect(response.status).toBe(401);
   });
 });

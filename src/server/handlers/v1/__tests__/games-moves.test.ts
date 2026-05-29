@@ -7,6 +7,8 @@ import { invalidJsonRequest, jsonRequest, readJson } from './test-utils';
 describe('POST /api/v1/games/:gameId/moves', () => {
   it('returns 400 for invalid JSON', async () => {
     const handler = createPostGameMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseGameMoveRequest: () => ({}) as any,
       commitGameMove: async () => ({}) as any,
     });
@@ -22,6 +24,8 @@ describe('POST /api/v1/games/:gameId/moves', () => {
 
   it('returns 200 with canonical position on success', async () => {
     const handler = createPostGameMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseGameMoveRequest: (body) => body as any,
       commitGameMove: async () =>
         ({
@@ -58,6 +62,8 @@ describe('POST /api/v1/games/:gameId/moves', () => {
 
   it('maps commit conflicts to 409', async () => {
     const handler = createPostGameMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       parseGameMoveRequest: (body) => body as any,
       commitGameMove: async () => {
         throw new CommitGameMoveError('TURN_MISMATCH', 'not your turn');
@@ -76,5 +82,25 @@ describe('POST /api/v1/games/:gameId/moves', () => {
 
     expect(response.status).toBe(409);
     expect(payload.error.code).toBe('TURN_MISMATCH');
+  });
+
+  it('returns 404 for non-owned game', async () => {
+    const handler = createPostGameMove({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => false,
+      parseGameMoveRequest: (body) => body as any,
+      commitGameMove: async () => ({}) as any,
+    });
+
+    const response = await handler(
+      'game-1',
+      jsonRequest('http://localhost/api/v1/games/game-1/moves', {
+        moveNo: 1,
+        actorSide: 'player',
+        move: { pieceCode: 'FU', fromRow: 6, fromCol: 4, toRow: 5, toCol: 4 },
+      }),
+    );
+
+    expect(response.status).toBe(404);
   });
 });

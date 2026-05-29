@@ -82,39 +82,73 @@ describe('online match battle setup handlers', () => {
   });
 
   it('gets a battle setup for internal matching server requests', async () => {
-    const handler = createGetBattleSetup({
-      ...deps,
-      resolveUserId: async () => {
-        throw new Error('missing auth');
-      },
-      getBattleSetup: async (userId: string, battleSetupId: string) => ({
-        battleSetupId,
-        ownerUserId: userId,
-        status: 'validated',
-        boardLayout: [],
-        handsLayout: [],
-        selectedPieceIds: [],
-        validationSummary: { boardPieceCount: 0, handPieceCount: 0, totalSelectedPieces: 0 },
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-        name: null,
-      }),
-    } as any);
-    const response = await handler(
-      new Request('http://localhost', {
-        headers: {
-          'x-internal-user-id': 'user-internal',
+    const original = process.env.MATCHING_BFF_INTERNAL_TOKEN;
+    process.env.MATCHING_BFF_INTERNAL_TOKEN = 'test-token';
+    try {
+      const handler = createGetBattleSetup({
+        ...deps,
+        resolveUserId: async () => {
+          throw new Error('missing auth');
         },
-      }),
-      {
-        params: Promise.resolve({ battleSetupId: 'bsetup_1' }),
-      },
-    );
-    const payload = await readJson(response);
+        getBattleSetup: async (userId: string, battleSetupId: string) => ({
+          battleSetupId,
+          ownerUserId: userId,
+          status: 'validated',
+          boardLayout: [],
+          handsLayout: [],
+          selectedPieceIds: [],
+          validationSummary: { boardPieceCount: 0, handPieceCount: 0, totalSelectedPieces: 0 },
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          name: null,
+        }),
+      } as any);
+      const response = await handler(
+        new Request('http://localhost', {
+          headers: {
+            'x-internal-user-id': 'user-internal',
+            'x-matching-internal-token': 'test-token',
+          },
+        }),
+        {
+          params: Promise.resolve({ battleSetupId: 'bsetup_1' }),
+        },
+      );
+      const payload = await readJson(response);
 
-    expect(response.status).toBe(200);
-    expect(payload.ok).toBe(true);
-    expect(payload.data.ownerUserId).toBe('user-internal');
+      expect(response.status).toBe(200);
+      expect(payload.ok).toBe(true);
+      expect(payload.data.ownerUserId).toBe('user-internal');
+    } finally {
+      process.env.MATCHING_BFF_INTERNAL_TOKEN = original;
+    }
+  });
+
+  it('rejects internal-user-id without internal token', async () => {
+    const original = process.env.MATCHING_BFF_INTERNAL_TOKEN;
+    process.env.MATCHING_BFF_INTERNAL_TOKEN = 'test-token';
+    try {
+      const handler = createGetBattleSetup({
+        ...deps,
+        resolveUserId: async () => {
+          throw new Error('missing auth');
+        },
+      } as any);
+      const response = await handler(
+        new Request('http://localhost', {
+          headers: {
+            'x-internal-user-id': 'user-internal',
+          },
+        }),
+        {
+          params: Promise.resolve({ battleSetupId: 'bsetup_1' }),
+        },
+      );
+
+      expect(response.status).toBe(401);
+    } finally {
+      process.env.MATCHING_BFF_INTERNAL_TOKEN = original;
+    }
   });
 
   it('locks a validated battle setup', async () => {

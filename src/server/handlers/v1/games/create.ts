@@ -1,9 +1,9 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createGameSession, CreateGameSessionError } from '@/services/game-session';
 
 type CreateGameRequest = {
-  playerId: string;
   stageNo?: number;
   initialPosition?: {
     sideToMove?: 'player' | 'enemy';
@@ -21,14 +21,24 @@ export function optionsCreateGame() {
 }
 
 type PostCreateGameDeps = {
+  resolveUserId: (req: Request) => Promise<string | null>;
   resolveStageId: (stageNo?: number) => Promise<number | null>;
   createGameSession: typeof createGameSession;
 };
 
 export function createPostCreateGame(
-  deps: PostCreateGameDeps = { resolveStageId, createGameSession },
+  deps: PostCreateGameDeps = {
+    resolveUserId: resolveBearerUserId,
+    resolveStageId,
+    createGameSession,
+  },
 ) {
   return async function postCreateGame(req: Request) {
+    const userId = await deps.resolveUserId(req);
+    if (!userId) {
+      return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    }
+
     let body: CreateGameRequest;
     try {
       body = (await req.json()) as CreateGameRequest;
@@ -36,15 +46,10 @@ export function createPostCreateGame(
       return jsonError('INVALID_JSON', 'Request body must be valid JSON', 400);
     }
 
-    const playerId = body?.playerId;
-    if (!playerId || typeof playerId !== 'string') {
-      return jsonError('INVALID_PLAYER_ID', 'playerId is required', 400);
-    }
-
     try {
       const stageId = await deps.resolveStageId(body.stageNo);
       const session = await deps.createGameSession({
-        playerId,
+        playerId: userId,
         stageId,
         initialPosition: body.initialPosition,
       });

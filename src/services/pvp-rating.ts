@@ -26,75 +26,24 @@ export async function applyPvpRatingForUser(input: {
     throw new Error('matchId is required');
   }
 
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from('player_pvp_rating_events')
-    .select('delta,rating_after')
-    .eq('player_id', input.userId)
-    .eq('match_id', matchId)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingError) throw existingError;
-  if (existing) {
-    return {
-      rating: normalizeRating(existing.rating_after),
-      delta: Number(existing.delta ?? 0),
-      alreadyApplied: true,
-    };
-  }
-
-  const { data: player, error: playerError } = await supabaseAdmin
-    .from('players')
-    .select('rating')
-    .eq('id', input.userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (playerError) throw playerError;
-  if (!player) {
-    throw new Error('Player profile not found');
-  }
-
-  const current = normalizeRating(player.rating);
-  const delta = input.won ? PVP_RATING_WIN_DELTA : -PVP_RATING_LOSS_DELTA;
-  const nextRating = Math.max(0, current + delta);
-
-  const { error: updateError } = await supabaseAdmin
-    .from('players')
-    .update({ rating: nextRating, updated_at: new Date().toISOString() })
-    .eq('id', input.userId);
-
-  if (updateError) throw updateError;
-
-  const { error: insertError } = await supabaseAdmin.from('player_pvp_rating_events').insert({
-    player_id: input.userId,
-    match_id: matchId,
-    won: input.won,
-    delta,
-    rating_after: nextRating,
+  const { data, error } = await supabaseAdmin.rpc('apply_pvp_rating_for_user', {
+    p_user_id: input.userId,
+    p_match_id: matchId,
+    p_won: input.won,
   });
 
-  if (insertError) {
-    if (insertError.code === '23505') {
-      const { data: raced } = await supabaseAdmin
-        .from('player_pvp_rating_events')
-        .select('delta,rating_after')
-        .eq('player_id', input.userId)
-        .eq('match_id', matchId)
-        .limit(1)
-        .maybeSingle();
-      if (raced) {
-        return {
-          rating: normalizeRating(raced.rating_after),
-          delta: Number(raced.delta ?? 0),
-          alreadyApplied: true,
-        };
-      }
-    }
-    throw insertError;
+  if (error) throw error;
+
+  const row = data as { rating?: unknown; delta?: unknown; already_applied?: unknown } | null;
+  if (!row) {
+    throw new Error('Failed to apply PvP rating');
   }
 
-  return { rating: nextRating, delta, alreadyApplied: false };
+  return {
+    rating: normalizeRating(row.rating),
+    delta: Number(row.delta ?? 0),
+    alreadyApplied: Boolean(row.already_applied),
+  };
 }
 
 export const PVP_RATING_LEADERBOARD_DEFAULT_LIMIT = 20;

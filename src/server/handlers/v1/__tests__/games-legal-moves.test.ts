@@ -7,6 +7,8 @@ import { readJson } from './test-utils';
 describe('GET /api/v1/games/:gameId/legal-moves', () => {
   it('returns 200 with legal moves on success', async () => {
     const handler = createGetGameLegalMoves({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       loadGameLegalMoves: async () =>
         ({
           sideToMove: 'player',
@@ -28,7 +30,7 @@ describe('GET /api/v1/games/:gameId/legal-moves', () => {
         }) as any,
     });
 
-    const response = await handler('game-1');
+    const response = await handler(new Request('http://localhost'), 'game-1');
     const payload = await readJson(response);
 
     expect(response.status).toBe(200);
@@ -38,15 +40,28 @@ describe('GET /api/v1/games/:gameId/legal-moves', () => {
 
   it('maps missing games to 404', async () => {
     const handler = createGetGameLegalMoves({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => true,
       loadGameLegalMoves: async () => {
         throw new CommitGameMoveError('GAME_NOT_FOUND', 'missing');
       },
     });
 
-    const response = await handler('game-404');
+    const response = await handler(new Request('http://localhost'), 'game-404');
     const payload = await readJson(response);
 
     expect(response.status).toBe(404);
     expect(payload.error.code).toBe('GAME_NOT_FOUND');
+  });
+
+  it('returns 404 for non-owned game', async () => {
+    const handler = createGetGameLegalMoves({
+      resolveUserId: async () => 'user-1',
+      isGameOwnedBy: async () => false,
+      loadGameLegalMoves: async () => ({}) as any,
+    });
+
+    const response = await handler(new Request('http://localhost'), 'game-1');
+    expect(response.status).toBe(404);
   });
 });

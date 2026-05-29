@@ -1,10 +1,14 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { parseAiMoveRequest, AiMoveRequestValidationError } from '@/lib/ai-move-request-parser';
 import { AiEngineConnectionError, AiEngineHttpError } from '@/lib/ai-engine-errors';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { isGameOwnedBy } from '@/services/game-access';
 import { executeAiTurn } from '@/services/ai-turn';
 import { CommitGameMoveError } from '@/services/game-move';
 
 type PostAiMoveDeps = {
+  resolveUserId: (req: Request) => Promise<string | null>;
+  isGameOwnedBy: typeof isGameOwnedBy;
   parseAiMoveRequest: typeof parseAiMoveRequest;
   executeAiTurn: typeof executeAiTurn;
 };
@@ -13,8 +17,20 @@ export function optionsAiMove() {
   return optionsResponse();
 }
 
-export function createPostAiMove(deps: PostAiMoveDeps = { parseAiMoveRequest, executeAiTurn }) {
+export function createPostAiMove(
+  deps: PostAiMoveDeps = {
+    resolveUserId: resolveBearerUserId,
+    isGameOwnedBy,
+    parseAiMoveRequest,
+    executeAiTurn,
+  },
+) {
   return async function postAiMove(req: Request) {
+    const userId = await deps.resolveUserId(req);
+    if (!userId) {
+      return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    }
+
     let body: unknown;
     try {
       body = await req.json();
@@ -24,6 +40,9 @@ export function createPostAiMove(deps: PostAiMoveDeps = { parseAiMoveRequest, ex
 
     try {
       const input = deps.parseAiMoveRequest(body);
+      if (!(await deps.isGameOwnedBy(input.gameId, userId))) {
+        return jsonError('NOT_FOUND', 'game not found', 404);
+      }
       const result = await deps.executeAiTurn(input);
       return jsonOk(result);
     } catch (error: any) {
