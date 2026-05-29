@@ -128,6 +128,15 @@
   - `404 PLAYER_NOT_FOUND`
   - `500 INTERNAL_ERROR`
 
+### `GET /api/v1/pvp-rating/leaderboard`
+- Query: `limit`（省略時 `20`、1〜100）
+- Success `200`: `data = { entries: [{ rank, playerId, displayName, rating }], snapshotAt }`
+- `entries` は `players.rating` 降順（同点は `updated_at` 昇順）
+- Errors:
+  - `401 UNAUTHORIZED`
+  - `400 INVALID_INPUT`
+  - `500 INTERNAL_ERROR`
+
 ### `POST /api/v1/me/pvp-rating/apply`
 - Body: `{ matchId: string, won: boolean }`
 - Success `200`: `data = { rating, delta, alreadyApplied }`

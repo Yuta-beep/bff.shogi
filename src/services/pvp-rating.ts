@@ -97,6 +97,50 @@ export async function applyPvpRatingForUser(input: {
   return { rating: nextRating, delta, alreadyApplied: false };
 }
 
+export const PVP_RATING_LEADERBOARD_DEFAULT_LIMIT = 20;
+export const PVP_RATING_LEADERBOARD_MAX_LIMIT = 100;
+
+export type PvpRatingLeaderboardEntry = {
+  rank: number;
+  playerId: string;
+  displayName: string;
+  rating: number;
+};
+
+export type PvpRatingLeaderboardSnapshot = {
+  entries: PvpRatingLeaderboardEntry[];
+  snapshotAt: string;
+};
+
+export async function fetchPvpRatingLeaderboard(
+  limit: number = PVP_RATING_LEADERBOARD_DEFAULT_LIMIT,
+): Promise<PvpRatingLeaderboardSnapshot> {
+  const safeLimit = Math.min(PVP_RATING_LEADERBOARD_MAX_LIMIT, Math.max(1, Math.floor(limit)));
+
+  const { data, error } = await supabaseAdmin
+    .from('players')
+    .select('id,display_name,rating')
+    .order('rating', { ascending: false })
+    .order('updated_at', { ascending: true })
+    .limit(safeLimit);
+
+  if (error) throw error;
+
+  const snapshotAt = new Date().toISOString();
+  const entries = (data ?? []).map((row, index) => {
+    const playerId = String(row.id ?? '').trim();
+    const displayName = ((row.display_name as string | null) ?? '').trim() || playerId;
+    return {
+      rank: index + 1,
+      playerId,
+      displayName,
+      rating: normalizeRating(row.rating),
+    };
+  });
+
+  return { entries, snapshotAt };
+}
+
 export async function getPublicPlayerProfile(userId: string): Promise<{
   userId: string;
   displayName: string;
