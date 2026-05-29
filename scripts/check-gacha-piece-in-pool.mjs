@@ -87,10 +87,7 @@ async function main() {
   console.log(`[ok] 「${kanji}」は次のガチャから排出可能です:`);
   for (const row of activePools) {
     const g = Array.isArray(row.m_gacha) ? row.m_gacha[0] : row.m_gacha;
-    const totalHint =
-      g.gacha_code === 'hihen'
-        ? ' (ひへん: 歩45+金25+灯15+煽10+爆5=100)'
-        : '';
+    const totalHint = g.gacha_code === 'hihen' ? ' (ひへん: 歩45+金25+灯15+煽10+爆5=100)' : '';
     console.log(`  - ${g.gacha_code} (${g.gacha_name}) weight=${row.weight}${totalHint}`);
   }
 }

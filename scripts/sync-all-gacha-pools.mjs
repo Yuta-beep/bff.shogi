@@ -90,10 +90,12 @@ async function main() {
       .eq('is_active', true);
     console.log(
       `[${code}] current:`,
-      (current ?? []).map((r) => {
-        const p = Array.isArray(r.m_piece) ? r.m_piece[0] : r.m_piece;
-        return `${p?.kanji}w${r.weight}`;
-      }).join(', ') || '(empty)',
+      (current ?? [])
+        .map((r) => {
+          const p = Array.isArray(r.m_piece) ? r.m_piece[0] : r.m_piece;
+          return `${p?.kanji}w${r.weight}`;
+        })
+        .join(', ') || '(empty)',
     );
   }
 
@@ -104,7 +106,11 @@ async function main() {
 
   for (const code of ['hihen', 'ukanmuri', 'shinnyo', 'kanken1']) {
     const gachaId = gachaByCode.get(code);
-    await supabase.schema('master').from('m_gacha_piece').update({ is_active: false }).eq('gacha_id', gachaId);
+    await supabase
+      .schema('master')
+      .from('m_gacha_piece')
+      .update({ is_active: false })
+      .eq('gacha_id', gachaId);
 
     const rows = POOLS.filter(([c]) => c === code)
       .map(([, kanji, weight]) => ({
@@ -115,7 +121,10 @@ async function main() {
       }))
       .filter((r) => r.piece_id);
 
-    await supabase.schema('master').from('m_gacha_piece').upsert(rows, { onConflict: 'gacha_id,piece_id' });
+    await supabase
+      .schema('master')
+      .from('m_gacha_piece')
+      .upsert(rows, { onConflict: 'gacha_id,piece_id' });
     console.log(`[ok] ${code}: ${rows.length} entries`);
   }
 }

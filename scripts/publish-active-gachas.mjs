@@ -51,7 +51,9 @@ async function main() {
   const { data: before, error: loadError } = await supabase
     .schema('master')
     .from('m_gacha')
-    .select('gacha_id,gacha_code,gacha_name,is_active,published_at,unpublished_at,pawn_cost,gold_cost')
+    .select(
+      'gacha_id,gacha_code,gacha_name,is_active,published_at,unpublished_at,pawn_cost,gold_cost',
+    )
     .in('gacha_code', GACHA_CODES);
   if (loadError) throw loadError;
 
@@ -97,7 +99,9 @@ async function main() {
     .select('gacha_code,unpublished_at,is_active')
     .in('gacha_code', GACHA_CODES);
 
-  console.log(`[ok] Published ${GACHA_CODES.length} gachas, reactivated gacha_piece rows: ${pieceCount ?? '?'}`);
+  console.log(
+    `[ok] Published ${GACHA_CODES.length} gachas, reactivated gacha_piece rows: ${pieceCount ?? '?'}`,
+  );
   console.log('[after]', after);
 }
 

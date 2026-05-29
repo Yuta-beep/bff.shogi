@@ -84,10 +84,13 @@ async function main() {
     .select('piece_id,weight,is_active,m_piece:piece_id(kanji)')
     .eq('gacha_id', gacha.gacha_id);
 
-  console.log('[current pool]', (current ?? []).map((r) => {
-    const p = Array.isArray(r.m_piece) ? r.m_piece[0] : r.m_piece;
-    return `${p?.kanji ?? '?'} w=${r.weight} active=${r.is_active}`;
-  }));
+  console.log(
+    '[current pool]',
+    (current ?? []).map((r) => {
+      const p = Array.isArray(r.m_piece) ? r.m_piece[0] : r.m_piece;
+      return `${p?.kanji ?? '?'} w=${r.weight} active=${r.is_active}`;
+    }),
+  );
 
   if (!shouldApply) {
     console.log('[dry-run] Re-run with --apply');

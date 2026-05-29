@@ -82,7 +82,9 @@ async function main() {
     else hit += 1;
   }
 
-  console.log(`[sim] ${trials} rolls: currency=${currency} (${((currency / trials) * 100).toFixed(1)}%) piece=${hit}`);
+  console.log(
+    `[sim] ${trials} rolls: currency=${currency} (${((currency / trials) * 100).toFixed(1)}%) piece=${hit}`,
+  );
 }
 
 main().catch((e) => {

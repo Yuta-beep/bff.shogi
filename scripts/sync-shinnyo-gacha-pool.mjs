@@ -71,10 +71,13 @@ async function main() {
     .eq('gacha_id', gacha.gacha_id)
     .eq('is_active', true);
 
-  console.log('[current]', (current ?? []).map((r) => {
-    const p = Array.isArray(r.m_piece) ? r.m_piece[0] : r.m_piece;
-    return `${p?.kanji} w=${r.weight}`;
-  }));
+  console.log(
+    '[current]',
+    (current ?? []).map((r) => {
+      const p = Array.isArray(r.m_piece) ? r.m_piece[0] : r.m_piece;
+      return `${p?.kanji} w=${r.weight}`;
+    }),
+  );
   console.log('[target]', planned.map((p) => `${p.kanji} w=${p.weight}`).join(', '));
 
   if (!shouldApply) {
@@ -82,7 +85,11 @@ async function main() {
     return;
   }
 
-  await supabase.schema('master').from('m_gacha_piece').update({ is_active: false }).eq('gacha_id', gacha.gacha_id);
+  await supabase
+    .schema('master')
+    .from('m_gacha_piece')
+    .update({ is_active: false })
+    .eq('gacha_id', gacha.gacha_id);
 
   const rows = planned.map((p) => ({
     gacha_id: gacha.gacha_id,
@@ -91,7 +98,10 @@ async function main() {
     is_active: true,
   }));
 
-  await supabase.schema('master').from('m_gacha_piece').upsert(rows, { onConflict: 'gacha_id,piece_id' });
+  await supabase
+    .schema('master')
+    .from('m_gacha_piece')
+    .upsert(rows, { onConflict: 'gacha_id,piece_id' });
   console.log('[ok] shinnyo pool synced (辺 weight=7)');
 }
 

@@ -37,8 +37,7 @@ export async function getPieceShopCatalog(req: Request = new Request('http://loc
       note: 'PLAYER_WALLET',
     });
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to load shop catalog';
+    const message = error instanceof Error ? error.message : 'Failed to load shop catalog';
     console.error('[shop/catalog]', message, error);
     return jsonError('INTERNAL_ERROR', message, 500);
   }

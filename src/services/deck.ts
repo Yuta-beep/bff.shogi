@@ -60,14 +60,10 @@ export type DeckSnapshot = {
 export function sortOwnedPiecesForDeckBuilder(pieces: OwnedPieceRow[]): OwnedPieceRow[] {
   const shopPieces = pieces
     .filter((piece) => piece.source === 'shop')
-    .sort(
-      (a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime(),
-    );
+    .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
   const otherPieces = pieces
     .filter((piece) => piece.source !== 'shop')
-    .sort(
-      (a, b) => new Date(a.acquiredAt).getTime() - new Date(b.acquiredAt).getTime(),
-    );
+    .sort((a, b) => new Date(a.acquiredAt).getTime() - new Date(b.acquiredAt).getTime());
   return [...shopPieces, ...otherPieces];
 }
 

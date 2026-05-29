@@ -70,7 +70,8 @@ export const SHOP_MASTER_DEFS: ShopMasterDef[] = [
     moveCode: 'shop_naku',
     kanji: '鳴',
     name: '鳴',
-    moveDescriptionJa: '銀と同じ移動範囲。移動時もし相手駒に同じ駒が3体いる場合、その3体をまとめて取る(ポン)。',
+    moveDescriptionJa:
+      '銀と同じ移動範囲。移動時もし相手駒に同じ駒が3体いる場合、その3体をまとめて取る(ポン)。',
     displayChar: 'NAKU',
     sfenCode: '@',
     canonicalPieceCode: 'shop_naku',
@@ -105,9 +106,7 @@ export async function lookupShopPiecesInDb(): Promise<Map<string, number>> {
   for (const row of data ?? []) {
     const pieceCode = String((row as { piece_code?: unknown }).piece_code ?? '');
     const kanji =
-      String((row as { kanji?: unknown }).kanji ?? '') ||
-      kanjiByPieceCode.get(pieceCode) ||
-      '';
+      String((row as { kanji?: unknown }).kanji ?? '') || kanjiByPieceCode.get(pieceCode) || '';
     const pieceId = toNumber((row as { piece_id?: unknown }).piece_id);
     if (kanji && pieceId) map.set(kanji, pieceId);
   }
@@ -246,9 +245,7 @@ async function ensureShopPiece(def: ShopMasterDef): Promise<number> {
       if (kanjiError) throw kanjiError;
       pieceId = toNumber((byKanji as { piece_id?: unknown } | null)?.piece_id);
       if (!pieceId) {
-        throw new Error(
-          `SHOP_PIECE_INSERT_FAILED:${def.kanji}:${insertError.message}`,
-        );
+        throw new Error(`SHOP_PIECE_INSERT_FAILED:${def.kanji}:${insertError.message}`);
       }
     } else {
       pieceId = toNumber(inserted.piece_id);

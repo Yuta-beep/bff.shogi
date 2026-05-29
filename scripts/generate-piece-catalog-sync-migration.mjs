@@ -92,7 +92,9 @@ function extractPieceUpsertSql() {
   const start = sql.indexOf('insert into master.m_piece');
   const end = sql.indexOf('commit;');
   if (start < 0 || end < 0) {
-    throw new Error('m_piece insert block not found in seed_master_piece.sql — run seed-master-piece-from-html.mjs first');
+    throw new Error(
+      'm_piece insert block not found in seed_master_piece.sql — run seed-master-piece-from-html.mjs first',
+    );
   }
   return `${sql.slice(start, end).trim()};\n`;
 }
@@ -186,7 +188,9 @@ commit;
     'supabase/migrations/20260526120000_sync_piece_catalog_from_html.sql',
   );
   fs.writeFileSync(outPath, migration, 'utf8');
-  console.log(`[ok] Wrote migration (${imageLines.length} image updates, ${kanjiList.length} kanji):`);
+  console.log(
+    `[ok] Wrote migration (${imageLines.length} image updates, ${kanjiList.length} kanji):`,
+  );
   console.log(`  ${outPath}`);
 }
 

@@ -59,7 +59,10 @@ function loadEnvFile(filePath) {
 }
 
 function getShogiRoot() {
-  for (const c of [path.resolve(backendRoot, '../shogi_game'), path.resolve(backendRoot, '../../shogi_game')]) {
+  for (const c of [
+    path.resolve(backendRoot, '../shogi_game'),
+    path.resolve(backendRoot, '../../shogi_game'),
+  ]) {
     if (fs.existsSync(path.join(c, 'piece_info.html'))) return c;
   }
   return null;
@@ -107,7 +110,9 @@ async function main() {
     'utf8',
   );
   const unlockByKanji = new Map();
-  for (const m of seedSql.matchAll(/\('piece_[^']+',\s*'([^']+)',\s*'([^']+)',\s*'[^']+',\s*NULL\)/g)) {
+  for (const m of seedSql.matchAll(
+    /\('piece_[^']+',\s*'([^']+)',\s*'([^']+)',\s*'[^']+',\s*NULL\)/g,
+  )) {
     unlockByKanji.set(m[1], null);
   }
   for (const row of [
@@ -145,7 +150,8 @@ async function main() {
   }
 
   console.log(`[info] Image key updates: ${planned.length}`);
-  if (planned.length > 0) console.table(planned.slice(0, 15).map((p) => ({ kanji: p.kanji, image_key: p.imageKey })));
+  if (planned.length > 0)
+    console.table(planned.slice(0, 15).map((p) => ({ kanji: p.kanji, image_key: p.imageKey })));
 
   if (!shouldApply) {
     console.log('[dry-run] Re-run with --apply');

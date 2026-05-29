@@ -1,10 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { MOCK_SHOP_ITEMS } from '@/server/mocks/shop';
-import {
-  lookupShopPiecesInDb,
-  resolveShopPieceId,
-  type ShopItemKey,
-} from '@/services/shop-master';
+import { lookupShopPiecesInDb, resolveShopPieceId, type ShopItemKey } from '@/services/shop-master';
 
 export type { ShopItemKey };
 export type ShopCostType = 'pawn' | 'gold';
@@ -138,10 +134,7 @@ async function grantShopOwnedPiece(
 }
 
 export async function getPieceShopCatalog(userId: string): Promise<PieceShopCatalogSnapshot> {
-  const [wallet, owned] = await Promise.all([
-    getPlayerWallet(userId),
-    listOwnedShopKeys(userId),
-  ]);
+  const [wallet, owned] = await Promise.all([getPlayerWallet(userId), listOwnedShopKeys(userId)]);
 
   return {
     items: SHOP_ITEMS,
