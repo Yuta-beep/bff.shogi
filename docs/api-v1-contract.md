@@ -106,6 +106,14 @@
   - `401 UNAUTHORIZED`
   - `500 INTERNAL_ERROR`
 
+### `GET /api/v1/deck/active-summary`
+- Success `200`: `data = { deckId: number | null, name: string | null, placements: DeckPlacement[] }`
+- Purpose:
+  - ホームのマイデッキ表示用。所有駒一覧を含まない軽量レスポンス。
+- Errors:
+  - `401 UNAUTHORIZED`
+  - `500 INTERNAL_ERROR`
+
 ### `POST /api/v1/deck`
 - Success `200`: `data = { deckId: number }`
 - Errors:

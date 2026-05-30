@@ -1,7 +1,13 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { measure } from '@/lib/perf';
 import { resolveBearerUserId } from '@/lib/auth';
-import { deleteDeck, getDeckSnapshot, saveDeck, upsertDeck } from '@/services/deck';
+import {
+  deleteDeck,
+  getActiveDeckSummary as getActiveDeckSummaryService,
+  getDeckSnapshot,
+  saveDeck,
+  upsertDeck,
+} from '@/services/deck';
 
 export async function resolveUserId(req: Request): Promise<string | null> {
   return resolveBearerUserId(req);
@@ -14,6 +20,7 @@ export function optionsDeck() {
 type DeckDeps = {
   resolveUserId: typeof resolveUserId;
   getDeckSnapshot: typeof getDeckSnapshot;
+  getActiveDeckSummary: typeof getActiveDeckSummaryService;
   saveDeck: typeof saveDeck;
   upsertDeck: typeof upsertDeck;
   deleteDeck: typeof deleteDeck;
@@ -22,6 +29,7 @@ type DeckDeps = {
 const defaultDeckDeps: DeckDeps = {
   resolveUserId,
   getDeckSnapshot,
+  getActiveDeckSummary: getActiveDeckSummaryService,
   saveDeck,
   upsertDeck,
   deleteDeck,
@@ -44,6 +52,32 @@ export function createGetDeck(deps: DeckDeps = defaultDeckDeps) {
         return jsonOk(snapshot);
       } catch (error: any) {
         return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load deck data', 500);
+      }
+    });
+  };
+}
+
+export function createGetActiveDeckSummary(deps: DeckDeps = defaultDeckDeps) {
+  return async function getActiveDeckSummaryHandler(req: Request) {
+    return measure('request.GET /api/v1/deck/active-summary', async () => {
+      const userId = await measure('request.deckActiveSummary.resolveUserId', () =>
+        deps.resolveUserId(req),
+      );
+      if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+
+      try {
+        const summary = await measure(
+          'request.deckActiveSummary.getActiveDeckSummary',
+          () => deps.getActiveDeckSummary(userId),
+          { userId },
+        );
+        return jsonOk(summary);
+      } catch (error: any) {
+        return jsonError(
+          'INTERNAL_ERROR',
+          error?.message ?? 'Failed to load active deck summary',
+          500,
+        );
       }
     });
   };
@@ -175,6 +209,8 @@ export function createDeleteDeckHandler(deps: DeckDeps = defaultDeckDeps) {
     }
   };
 }
+
+export const getActiveDeckSummary = createGetActiveDeckSummary();
 
 export const getDeck = createGetDeck();
 export const postDeck = createPostDeck();

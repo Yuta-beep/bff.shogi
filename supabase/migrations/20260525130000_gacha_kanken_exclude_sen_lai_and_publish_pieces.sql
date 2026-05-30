@@ -7,8 +7,9 @@ set
   is_active = false,
   updated_at = now()
 from master.m_gacha as g
-join master.m_piece as p on p.piece_id = gp.piece_id
+join master.m_piece as p on p.kanji in ('殲', '賚')
 where gp.gacha_id = g.gacha_id
+  and gp.piece_id = p.piece_id
   and g.gacha_code = 'kanken1'
   and p.kanji in ('殲', '賚');
 

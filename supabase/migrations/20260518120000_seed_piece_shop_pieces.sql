@@ -1,6 +1,13 @@
 -- 駒ショップ販売駒（走・種・麒・舞・P・鳴）の master 登録
 begin;
 
+alter table master.m_piece_mapping
+  drop constraint if exists m_piece_mapping_sfen_code_chk;
+
+alter table master.m_piece_mapping
+  add constraint m_piece_mapping_sfen_code_chk
+  check (sfen_code is null or sfen_code ~ '^[A-Za-z0-9+!,@._-]{1,3}$');
+
 insert into master.m_move_pattern (
   move_code,
   move_name,

@@ -57,6 +57,12 @@ export type DeckSnapshot = {
   decks: DeckRow[];
 };
 
+export type ActiveDeckSummary = {
+  deckId: number | null;
+  name: string | null;
+  placements: DeckPlacement[];
+};
+
 /** ショップ購入駒を一覧先頭（新しい shop ほど前）に並べる */
 export function sortOwnedPiecesForDeckBuilder(pieces: OwnedPieceRow[]): OwnedPieceRow[] {
   const shopPieces = pieces
@@ -212,6 +218,119 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   }));
 
   return { ownedPieces, decks };
+}
+
+export async function getActiveDeckSummary(userId: string): Promise<ActiveDeckSummary> {
+  const { data: deckRows, error: deckError } = await measure(
+    'deck.getActiveDeckSummary.deckQuery',
+    () =>
+      supabaseAdmin
+        .from('player_decks')
+        .select('deck_id, name, player_deck_placements(row_no, col_no, piece_id)')
+        .eq('player_id', userId)
+        .order('deck_id', { ascending: true }),
+    { userId },
+  );
+
+  if (deckError) throw deckError;
+
+  const decks = (deckRows ?? []) as Array<{
+    deck_id: number;
+    name: string;
+    player_deck_placements?: Array<{ row_no: number; col_no: number; piece_id: number }>;
+  }>;
+
+  const targetDeck =
+    decks.find(
+      (deck) => deck.name === 'マイデッキ' && (deck.player_deck_placements?.length ?? 0) > 0,
+    ) ?? decks.find((deck) => (deck.player_deck_placements?.length ?? 0) > 0);
+
+  if (!targetDeck?.player_deck_placements || targetDeck.player_deck_placements.length === 0) {
+    return { deckId: null, name: null, placements: [] };
+  }
+
+  const pieceIds = [
+    ...new Set(
+      targetDeck.player_deck_placements
+        .map((placement) => placement.piece_id)
+        .filter((id): id is number => typeof id === 'number'),
+    ),
+  ];
+
+  const pieceById = new Map<
+    number,
+    {
+      kanji: string;
+      pieceCode: string;
+      mappingDisplayChar: string;
+      mappingCanonical: string;
+      name: string;
+    }
+  >();
+  if (pieceIds.length > 0) {
+    const [pieceRes, mappingRes] = await Promise.all([
+      measure(
+        'deck.getActiveDeckSummary.masterPiecesQuery',
+        () =>
+          supabaseAdmin
+            .schema('master')
+            .from('m_piece')
+            .select('piece_id, piece_code, kanji, name')
+            .in('piece_id', pieceIds),
+        { userId, pieceCount: pieceIds.length },
+      ),
+      measure(
+        'deck.getActiveDeckSummary.masterPieceMappingsQuery',
+        () =>
+          supabaseAdmin
+            .schema('master')
+            .from('m_piece_mapping')
+            .select('piece_id, display_char, canonical_piece_code')
+            .in('piece_id', pieceIds),
+        { userId, pieceCount: pieceIds.length },
+      ),
+    ]);
+
+    if (pieceRes.error) throw pieceRes.error;
+    if (mappingRes.error) throw mappingRes.error;
+
+    const mappingByPieceId = new Map<number, { displayChar: string; canonicalPieceCode: string }>();
+    for (const row of mappingRes.data ?? []) {
+      mappingByPieceId.set(row.piece_id as number, {
+        displayChar: (row.display_char as string) ?? '',
+        canonicalPieceCode: (row.canonical_piece_code as string) ?? '',
+      });
+    }
+
+    for (const piece of pieceRes.data ?? []) {
+      const pid = piece.piece_id as number;
+      const mapRow = mappingByPieceId.get(pid);
+      pieceById.set(piece.piece_id as number, {
+        kanji: (piece.kanji as string) ?? '',
+        pieceCode: (piece.piece_code as string) ?? '',
+        mappingDisplayChar: mapRow?.displayChar ?? '',
+        mappingCanonical: mapRow?.canonicalPieceCode ?? '',
+        name: (piece.name as string) ?? '',
+      });
+    }
+  }
+
+  return {
+    deckId: targetDeck.deck_id,
+    name: targetDeck.name,
+    placements: targetDeck.player_deck_placements
+      .map((placement) => {
+        const meta = pieceById.get(placement.piece_id);
+        return {
+          rowNo: placement.row_no,
+          colNo: placement.col_no,
+          pieceId: placement.piece_id,
+          char: meta ? deckSnapshotCharFromMeta(meta) : '',
+          name: meta?.name ?? '',
+        };
+      })
+      .sort((a, b) => a.rowNo - b.rowNo || a.colNo - b.colNo),
+  };
 }
 
 export type SaveDeckInput = {

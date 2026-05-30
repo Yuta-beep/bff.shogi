@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'bun:test';
 
-import { createDeleteDeckHandler, createGetDeck, createPostDeck, createPutDeck } from '../deck';
+import {
+  createDeleteDeckHandler,
+  createGetActiveDeckSummary,
+  createGetDeck,
+  createPostDeck,
+  createPutDeck,
+} from '../deck';
 import { invalidJsonRequest, jsonRequest, readJson } from './test-utils';
 
 const baseDeps = {
   resolveUserId: async () => 'user-1',
   getDeckSnapshot: async () => ({ ownedPieces: [], decks: [] }),
+  getActiveDeckSummary: async () => ({ deckId: 1, name: 'マイデッキ', placements: [] }),
   saveDeck: async () => 42,
   upsertDeck: async () => 7,
   deleteDeck: async () => {},
@@ -38,6 +45,30 @@ describe('/api/v1/deck', () => {
     const okPayload = await readJson(ok);
     expect(ok.status).toBe(200);
     expect(okPayload).toEqual({ ok: true, data: { deckId: 42 } });
+  });
+
+  it('GET active summary returns lightweight deck data', async () => {
+    const handler = createGetActiveDeckSummary({
+      ...baseDeps,
+      getActiveDeckSummary: async () => ({
+        deckId: 1,
+        name: 'マイデッキ',
+        placements: [{ rowNo: 0, colNo: 1, pieceId: 2, char: '歩', name: '歩兵' }],
+      }),
+    });
+
+    const response = await handler(new Request('http://localhost/api/v1/deck/active-summary'));
+    const payload = await readJson(response);
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({
+      ok: true,
+      data: {
+        deckId: 1,
+        name: 'マイデッキ',
+        placements: [{ rowNo: 0, colNo: 1, pieceId: 2, char: '歩', name: '歩兵' }],
+      },
+    });
   });
 
   it('DELETE validates deckId query param', async () => {
