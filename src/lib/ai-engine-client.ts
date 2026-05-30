@@ -9,6 +9,9 @@ import type {
   LegalMovesResponse,
 } from '@/lib/ai-engine-contract';
 import type { NormalizedEngineConfig } from '@/lib/engine-config';
+import { fetchWithTimeout, getFetchTimeoutMs } from '@/lib/perf';
+
+const AI_ENGINE_FETCH_TIMEOUT_MS = getFetchTimeoutMs('AI_ENGINE_FETCH_TIMEOUT_MS', 5000);
 
 export async function requestAiMove(
   input: AiMoveRequest & { engineConfig: NormalizedEngineConfig },
@@ -17,13 +20,15 @@ export async function requestAiMove(
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/v1/ai/move`, {
+    response = await fetchWithTimeout(`${baseUrl}/v1/ai/move`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(toEngineRequest(input)),
+      timeoutMs: AI_ENGINE_FETCH_TIMEOUT_MS,
+      label: 'aiEngine.requestAiMove.fetch',
     });
   } catch (error: any) {
     throw new AiEngineConnectionError(error?.message ?? 'failed to connect to ai engine');
@@ -96,7 +101,7 @@ export async function applyAiMove(input: ApplyMoveRequest): Promise<ApplyMoveRes
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/v1/positions/apply`, {
+    response = await fetchWithTimeout(`${baseUrl}/v1/positions/apply`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -135,6 +140,8 @@ export async function applyAiMove(input: ApplyMoveRequest): Promise<ApplyMoveRes
           notation: input.selectedMove.notation,
         },
       }),
+      timeoutMs: AI_ENGINE_FETCH_TIMEOUT_MS,
+      label: 'aiEngine.applyAiMove.fetch',
     });
   } catch (error: any) {
     throw new AiEngineConnectionError(error?.message ?? 'failed to connect to ai engine');
@@ -167,7 +174,7 @@ export async function requestLegalMoves(input: LegalMovesRequest): Promise<Legal
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/v1/positions/legal-moves`, {
+    response = await fetchWithTimeout(`${baseUrl}/v1/positions/legal-moves`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -195,6 +202,8 @@ export async function requestLegalMoves(input: LegalMovesRequest): Promise<Legal
           })),
         },
       }),
+      timeoutMs: AI_ENGINE_FETCH_TIMEOUT_MS,
+      label: 'aiEngine.requestLegalMoves.fetch',
     });
   } catch (error: any) {
     throw new AiEngineConnectionError(error?.message ?? 'failed to connect to ai engine');

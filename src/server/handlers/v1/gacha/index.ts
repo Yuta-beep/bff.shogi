@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { measure } from '@/lib/perf';
 import { getGachaLobby, rollGacha } from '@/services/gacha';
 import { resolveUserId } from '@/server/handlers/v1/deck';
 
@@ -7,15 +8,23 @@ export function optionsGacha() {
 }
 
 export async function getGachaLobbyHandler(req: Request) {
-  const userId = await resolveUserId(req);
-  if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+  return measure('request.GET /api/v1/gacha/lobby', async () => {
+    const userId = await measure('request.gachaLobby.resolveUserId', () => resolveUserId(req));
+    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
 
-  try {
-    const snapshot = await getGachaLobby(userId);
-    return jsonOk(snapshot);
-  } catch (error: any) {
-    return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load gacha lobby', 500);
-  }
+    try {
+      const snapshot = await measure(
+        'request.gachaLobby.getGachaLobby',
+        () => getGachaLobby(userId),
+        {
+          userId,
+        },
+      );
+      return jsonOk(snapshot);
+    } catch (error: any) {
+      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load gacha lobby', 500);
+    }
+  });
 }
 
 type RollBody = {

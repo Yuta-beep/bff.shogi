@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { measure } from '@/lib/perf';
 
 /** デッキビルダーに出さない駒（未実装の漢検1級旧枠） */
 const DECK_BUILDER_EXCLUDED_KANJI = new Set(['殲', '賚']);
@@ -68,21 +69,26 @@ export function sortOwnedPiecesForDeckBuilder(pieces: OwnedPieceRow[]): OwnedPie
 }
 
 export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
-  const [ownedRes, decksRes] = await Promise.all([
-    supabaseAdmin
-      .from('player_owned_pieces')
-      .select('piece_id, quantity, acquired_at, source')
-      .eq('player_id', userId)
-      .order('acquired_at', { ascending: true }),
+  const [ownedRes, decksRes] = await measure(
+    'deck.getDeckSnapshot.baseQueries',
+    () =>
+      Promise.all([
+        supabaseAdmin
+          .from('player_owned_pieces')
+          .select('piece_id, quantity, acquired_at, source')
+          .eq('player_id', userId)
+          .order('acquired_at', { ascending: true }),
 
-    supabaseAdmin
-      .from('player_decks')
-      .select(
-        'deck_id, name, created_at, updated_at, player_deck_placements(row_no, col_no, piece_id)',
-      )
-      .eq('player_id', userId)
-      .order('created_at', { ascending: true }),
-  ]);
+        supabaseAdmin
+          .from('player_decks')
+          .select(
+            'deck_id, name, created_at, updated_at, player_deck_placements(row_no, col_no, piece_id)',
+          )
+          .eq('player_id', userId)
+          .order('created_at', { ascending: true }),
+      ]),
+    { userId },
+  );
 
   if (ownedRes.error) throw ownedRes.error;
   if (decksRes.error) throw decksRes.error;
@@ -123,19 +129,29 @@ export async function getDeckSnapshot(userId: string): Promise<DeckSnapshot> {
   >();
   if (pieceIds.size > 0) {
     const ids = Array.from(pieceIds);
-    const { data: pieceRows, error: pieceError } = await supabaseAdmin
-      .schema('master')
-      .from('m_piece')
-      .select('piece_id, piece_code, kanji, name, image_bucket, image_key')
-      .in('piece_id', ids);
+    const { data: pieceRows, error: pieceError } = await measure(
+      'deck.getDeckSnapshot.masterPiecesQuery',
+      () =>
+        supabaseAdmin
+          .schema('master')
+          .from('m_piece')
+          .select('piece_id, piece_code, kanji, name, image_bucket, image_key')
+          .in('piece_id', ids),
+      { userId, pieceCount: ids.length },
+    );
 
     if (pieceError) throw pieceError;
 
-    const { data: mappingRows, error: mappingError } = await supabaseAdmin
-      .schema('master')
-      .from('m_piece_mapping')
-      .select('piece_id, display_char, canonical_piece_code')
-      .in('piece_id', ids);
+    const { data: mappingRows, error: mappingError } = await measure(
+      'deck.getDeckSnapshot.masterPieceMappingsQuery',
+      () =>
+        supabaseAdmin
+          .schema('master')
+          .from('m_piece_mapping')
+          .select('piece_id, display_char, canonical_piece_code')
+          .in('piece_id', ids),
+      { userId, pieceCount: ids.length },
+    );
 
     if (mappingError) throw mappingError;
 

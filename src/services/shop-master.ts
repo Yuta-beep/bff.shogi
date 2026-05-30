@@ -83,6 +83,11 @@ export const SHOP_ITEM_PIECE_CODE: Record<ShopItemKey, string> = Object.fromEntr
 ) as Record<ShopItemKey, string>;
 
 let bootstrapPromise: Promise<void> | null = null;
+let shopPiecesCache: Map<string, number> | null = null;
+let shopPiecesCacheAt = 0;
+let shopPiecesInFlight: Promise<Map<string, number>> | null = null;
+
+const SHOP_PIECES_CACHE_TTL_MS = 60_000;
 
 function toNumber(value: unknown, fallback = 0): number {
   const n = Number(value);
@@ -91,6 +96,25 @@ function toNumber(value: unknown, fallback = 0): number {
 
 /** DB に登録済みのショップ駒を取得（マスタ自動登録はしない） */
 export async function lookupShopPiecesInDb(): Promise<Map<string, number>> {
+  const now = Date.now();
+  if (shopPiecesCache && now - shopPiecesCacheAt < SHOP_PIECES_CACHE_TTL_MS) {
+    return new Map(shopPiecesCache);
+  }
+  if (shopPiecesInFlight) {
+    const cached = await shopPiecesInFlight;
+    return new Map(cached);
+  }
+
+  shopPiecesInFlight = lookupShopPiecesInDbUncached().finally(() => {
+    shopPiecesInFlight = null;
+  });
+  const rows = await shopPiecesInFlight;
+  shopPiecesCache = new Map(rows);
+  shopPiecesCacheAt = Date.now();
+  return new Map(rows);
+}
+
+async function lookupShopPiecesInDbUncached(): Promise<Map<string, number>> {
   const pieceCodes = SHOP_MASTER_DEFS.map((def) => def.pieceCode);
   const { data, error } = await supabaseAdmin
     .schema('master')
@@ -278,6 +302,8 @@ export async function ensureShopMasterData(): Promise<void> {
       throw error;
     });
   }
+  shopPiecesCache = null;
+  shopPiecesCacheAt = 0;
   await bootstrapPromise;
 }
 

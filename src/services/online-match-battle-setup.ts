@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { measure } from '@/lib/perf';
 
 type BattleSetupStatus = 'draft' | 'validated' | 'locked' | 'consumed';
 
@@ -73,7 +74,11 @@ export async function saveBattleSetup(input: {
     createdAt: now,
     updatedAt: now,
   };
-  const { error } = await supabaseAdmin.from('online_match_battle_setups').insert(toRow(record));
+  const { error } = await measure(
+    'onlineMatch.saveBattleSetup.insert',
+    () => supabaseAdmin.from('online_match_battle_setups').insert(toRow(record)),
+    { ownerUserId: input.ownerUserId, battleSetupId },
+  );
   if (error) throw error;
   return record;
 }
@@ -91,11 +96,16 @@ export async function validateBattleSetup(ownerUserId: string, battleSetupId: st
     validationSummary: summarize(current),
     updatedAt: new Date().toISOString(),
   };
-  const { error } = await supabaseAdmin
-    .from('online_match_battle_setups')
-    .update(toRowPatch(next))
-    .eq('battle_setup_id', battleSetupId)
-    .eq('owner_user_id', ownerUserId);
+  const { error } = await measure(
+    'onlineMatch.validateBattleSetup.update',
+    () =>
+      supabaseAdmin
+        .from('online_match_battle_setups')
+        .update(toRowPatch(next))
+        .eq('battle_setup_id', battleSetupId)
+        .eq('owner_user_id', ownerUserId),
+    { ownerUserId, battleSetupId },
+  );
   if (error) throw error;
   return next;
 }
@@ -114,11 +124,16 @@ export async function lockBattleSetup(ownerUserId: string, battleSetupId: string
     status: 'locked',
     updatedAt: new Date().toISOString(),
   };
-  const { error } = await supabaseAdmin
-    .from('online_match_battle_setups')
-    .update(toRowPatch(next))
-    .eq('battle_setup_id', battleSetupId)
-    .eq('owner_user_id', ownerUserId);
+  const { error } = await measure(
+    'onlineMatch.lockBattleSetup.update',
+    () =>
+      supabaseAdmin
+        .from('online_match_battle_setups')
+        .update(toRowPatch(next))
+        .eq('battle_setup_id', battleSetupId)
+        .eq('owner_user_id', ownerUserId),
+    { ownerUserId, battleSetupId },
+  );
   if (error) throw error;
   return next;
 }
@@ -133,23 +148,33 @@ export async function consumeBattleSetup(ownerUserId: string, battleSetupId: str
     status: 'consumed',
     updatedAt: new Date().toISOString(),
   };
-  const { error } = await supabaseAdmin
-    .from('online_match_battle_setups')
-    .update(toRowPatch(next))
-    .eq('battle_setup_id', battleSetupId)
-    .eq('owner_user_id', ownerUserId);
+  const { error } = await measure(
+    'onlineMatch.consumeBattleSetup.update',
+    () =>
+      supabaseAdmin
+        .from('online_match_battle_setups')
+        .update(toRowPatch(next))
+        .eq('battle_setup_id', battleSetupId)
+        .eq('owner_user_id', ownerUserId),
+    { ownerUserId, battleSetupId },
+  );
   if (error) throw error;
   return next;
 }
 
 async function requireBattleSetup(ownerUserId: string, battleSetupId: string) {
-  const { data, error } = await supabaseAdmin
-    .from('online_match_battle_setups')
-    .select('*')
-    .eq('battle_setup_id', battleSetupId)
-    .eq('owner_user_id', ownerUserId)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await measure(
+    'onlineMatch.requireBattleSetup.query',
+    () =>
+      supabaseAdmin
+        .from('online_match_battle_setups')
+        .select('*')
+        .eq('battle_setup_id', battleSetupId)
+        .eq('owner_user_id', ownerUserId)
+        .limit(1)
+        .maybeSingle(),
+    { ownerUserId, battleSetupId },
+  );
 
   if (error) throw error;
   if (!data) {

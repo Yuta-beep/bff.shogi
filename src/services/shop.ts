@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { measure } from '@/lib/perf';
 import { MOCK_SHOP_ITEMS } from '@/server/mocks/shop';
 import { lookupShopPiecesInDb, resolveShopPieceId, type ShopItemKey } from '@/services/shop-master';
 
@@ -40,12 +41,17 @@ function toNumber(value: unknown, fallback = 0): number {
 async function getPlayerWallet(
   userId: string,
 ): Promise<{ pawnCurrency: number; goldCurrency: number }> {
-  const { data, error } = await supabaseAdmin
-    .from('players')
-    .select('pawn_currency,gold_currency')
-    .eq('id', userId)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await measure(
+    'shop.getPlayerWallet.query',
+    () =>
+      supabaseAdmin
+        .from('players')
+        .select('pawn_currency,gold_currency')
+        .eq('id', userId)
+        .limit(1)
+        .maybeSingle(),
+    { userId },
+  );
   if (error) throw error;
   if (!data) throw new Error('Player not found');
   return {
@@ -58,7 +64,7 @@ async function listOwnedShopKeys(userId: string): Promise<ShopItemKey[]> {
   const shopKanji = SHOP_ITEMS.map((item) => item.key);
   let pieceIdByKanji: Map<string, number>;
   try {
-    pieceIdByKanji = await lookupShopPiecesInDb();
+    pieceIdByKanji = await measure('shop.lookupShopPiecesInDb', () => lookupShopPiecesInDb());
   } catch {
     return [];
   }
@@ -66,11 +72,16 @@ async function listOwnedShopKeys(userId: string): Promise<ShopItemKey[]> {
   const shopPieceIds = Array.from(pieceIdByKanji.values());
   if (shopPieceIds.length === 0) return [];
 
-  const { data: ownedRows, error: ownedError } = await supabaseAdmin
-    .from('player_owned_pieces')
-    .select('piece_id')
-    .eq('player_id', userId)
-    .in('piece_id', shopPieceIds);
+  const { data: ownedRows, error: ownedError } = await measure(
+    'shop.listOwnedShopKeys.query',
+    () =>
+      supabaseAdmin
+        .from('player_owned_pieces')
+        .select('piece_id')
+        .eq('player_id', userId)
+        .in('piece_id', shopPieceIds),
+    { userId, pieceCount: shopPieceIds.length },
+  );
   if (ownedError) throw ownedError;
 
   const ownedIds = new Set(
@@ -84,7 +95,11 @@ async function listOwnedShopKeys(userId: string): Promise<ShopItemKey[]> {
 }
 
 export async function getPieceShopCatalog(userId: string): Promise<PieceShopCatalogSnapshot> {
-  const [wallet, owned] = await Promise.all([getPlayerWallet(userId), listOwnedShopKeys(userId)]);
+  const [wallet, owned] = await measure(
+    'shop.getPieceShopCatalog.parallel',
+    () => Promise.all([getPlayerWallet(userId), listOwnedShopKeys(userId)]),
+    { userId },
+  );
 
   return {
     items: SHOP_ITEMS,
@@ -110,13 +125,20 @@ export async function purchasePieceShopItem(
   const item = SHOP_ITEMS.find((entry) => entry.key === itemKey);
   if (!item) throw new Error('ITEM_NOT_FOUND');
 
-  const pieceId = await resolveShopPieceId(itemKey);
-  const { data, error } = await supabaseAdmin.rpc('purchase_shop_piece_item', {
-    p_user_id: userId,
-    p_piece_id: pieceId,
-    p_pawn_cost: item.costType === 'pawn' ? item.cost : 0,
-    p_gold_cost: item.costType === 'gold' ? item.cost : 0,
+  const pieceId = await measure('shop.resolveShopPieceId', () => resolveShopPieceId(itemKey), {
+    itemKey,
   });
+  const { data, error } = await measure(
+    'shop.purchasePieceShopItem.rpc',
+    () =>
+      supabaseAdmin.rpc('purchase_shop_piece_item', {
+        p_user_id: userId,
+        p_piece_id: pieceId,
+        p_pawn_cost: item.costType === 'pawn' ? item.cost : 0,
+        p_gold_cost: item.costType === 'gold' ? item.cost : 0,
+      }),
+    { userId, itemKey, pieceId },
+  );
   if (error) throw error;
 
   const row = data as {

@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { measure, measureSync } from '@/lib/perf';
 import { getPublicPlayerProfile } from '@/services/pvp-rating';
 
 export type MatchmakingTicket = {
@@ -15,7 +16,11 @@ const DEFAULT_TTL_SECONDS = 120;
 
 export async function issueMatchmakingTicket(userId: string): Promise<MatchmakingTicket> {
   const secret = getTicketSecret();
-  const profile = await getPublicPlayerProfile(userId);
+  const profile = await measure(
+    'onlineMatch.issueMatchmakingTicket.profile',
+    () => getPublicPlayerProfile(userId),
+    { userId },
+  );
   if (!profile) {
     throw new Error('Player profile not found');
   }
@@ -27,8 +32,15 @@ export async function issueMatchmakingTicket(userId: string): Promise<Matchmakin
     rating: profile.rating,
     exp,
   };
-  const payloadPart = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
-  const signaturePart = createHmac('sha256', secret).update(payloadPart).digest('base64url');
+  const { payloadPart, signaturePart } = await measureSync(
+    'onlineMatch.issueMatchmakingTicket.sign',
+    () => {
+      const payloadPart = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+      const signaturePart = createHmac('sha256', secret).update(payloadPart).digest('base64url');
+      return { payloadPart, signaturePart };
+    },
+    { userId },
+  );
 
   return {
     ticket: `${payloadPart}.${signaturePart}`,

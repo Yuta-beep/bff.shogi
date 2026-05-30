@@ -1,5 +1,6 @@
 import { isAuthorizedInternalRequest } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { measure } from '@/lib/perf';
 import {
   getBattleSetup,
   lockBattleSetup,
@@ -103,28 +104,37 @@ function parseSaveBody(body: SaveBattleSetupBody): ParsedSaveBattleSetupBody | R
 
 export function createPostBattleSetup(deps: BattleSetupDeps = defaultDeps) {
   return async function postBattleSetup(req: Request) {
-    const userId = await resolveBattleSetupUserId(req, deps);
-    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    return measure('request.POST /api/v1/online-match/battle-setup', async () => {
+      const userId = await measure('request.battleSetup.resolveUserId', () =>
+        resolveBattleSetupUserId(req, deps),
+      );
+      if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
 
-    let body: SaveBattleSetupBody;
-    try {
-      body = (await req.json()) as SaveBattleSetupBody;
-    } catch {
-      return jsonError('INVALID_JSON', 'Request body must be JSON', 400);
-    }
+      let body: SaveBattleSetupBody;
+      try {
+        body = (await req.json()) as SaveBattleSetupBody;
+      } catch {
+        return jsonError('INVALID_JSON', 'Request body must be JSON', 400);
+      }
 
-    const parsed = parseSaveBody(body);
-    if (parsed instanceof Response) return parsed;
+      const parsed = parseSaveBody(body);
+      if (parsed instanceof Response) return parsed;
 
-    try {
-      const setup = await deps.saveBattleSetup({
-        ownerUserId: userId,
-        ...parsed,
-      });
-      return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
-    } catch (error: any) {
-      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to save battle setup', 500);
-    }
+      try {
+        const setup = await measure(
+          'request.battleSetup.saveBattleSetup',
+          () =>
+            deps.saveBattleSetup({
+              ownerUserId: userId,
+              ...parsed,
+            }),
+          { userId, selectedPieceCount: parsed.selectedPieceIds.length },
+        );
+        return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
+      } catch (error: any) {
+        return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to save battle setup', 500);
+      }
+    });
   };
 }
 
@@ -133,22 +143,33 @@ export function createPostBattleSetupValidate(deps: BattleSetupDeps = defaultDep
     req: Request,
     context: { params: Promise<{ battleSetupId: string }> },
   ) {
-    const userId = await resolveBattleSetupUserId(req, deps);
-    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
-    const { battleSetupId } = await context.params;
+    return measure(
+      'request.POST /api/v1/online-match/battle-setup/[battleSetupId]/validate',
+      async () => {
+        const userId = await measure('request.battleSetupValidate.resolveUserId', () =>
+          resolveBattleSetupUserId(req, deps),
+        );
+        if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+        const { battleSetupId } = await context.params;
 
-    try {
-      const setup = await deps.validateBattleSetup(userId, battleSetupId);
-      return jsonOk({
-        battleSetupId: setup.battleSetupId,
-        status: setup.status,
-        summary: setup.validationSummary,
-      });
-    } catch (error: any) {
-      const message = error?.message ?? 'Failed to validate battle setup';
-      const status = message.includes('not found') ? 404 : 400;
-      return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
-    }
+        try {
+          const setup = await measure(
+            'request.battleSetupValidate.validateBattleSetup',
+            () => deps.validateBattleSetup(userId, battleSetupId),
+            { userId, battleSetupId },
+          );
+          return jsonOk({
+            battleSetupId: setup.battleSetupId,
+            status: setup.status,
+            summary: setup.validationSummary,
+          });
+        } catch (error: any) {
+          const message = error?.message ?? 'Failed to validate battle setup';
+          const status = message.includes('not found') ? 404 : 400;
+          return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
+        }
+      },
+    );
   };
 }
 
@@ -157,16 +178,24 @@ export function createGetBattleSetup(deps: BattleSetupDeps = defaultDeps) {
     req: Request,
     context: { params: Promise<{ battleSetupId: string }> },
   ) {
-    const userId = await resolveBattleSetupUserId(req, deps);
-    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
-    const { battleSetupId } = await context.params;
+    return measure('request.GET /api/v1/online-match/battle-setup/[battleSetupId]', async () => {
+      const userId = await measure('request.battleSetupGet.resolveUserId', () =>
+        resolveBattleSetupUserId(req, deps),
+      );
+      if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+      const { battleSetupId } = await context.params;
 
-    try {
-      const setup = await deps.getBattleSetup(userId, battleSetupId);
-      return jsonOk(setup);
-    } catch (error: any) {
-      return jsonError('NOT_FOUND', error?.message ?? 'Battle setup not found', 404);
-    }
+      try {
+        const setup = await measure(
+          'request.battleSetupGet.getBattleSetup',
+          () => deps.getBattleSetup(userId, battleSetupId),
+          { userId, battleSetupId },
+        );
+        return jsonOk(setup);
+      } catch (error: any) {
+        return jsonError('NOT_FOUND', error?.message ?? 'Battle setup not found', 404);
+      }
+    });
   };
 }
 
@@ -175,18 +204,29 @@ export function createPostBattleSetupLock(deps: BattleSetupDeps = defaultDeps) {
     req: Request,
     context: { params: Promise<{ battleSetupId: string }> },
   ) {
-    const userId = await resolveBattleSetupUserId(req, deps);
-    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
-    const { battleSetupId } = await context.params;
+    return measure(
+      'request.POST /api/v1/online-match/battle-setup/[battleSetupId]/lock',
+      async () => {
+        const userId = await measure('request.battleSetupLock.resolveUserId', () =>
+          resolveBattleSetupUserId(req, deps),
+        );
+        if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+        const { battleSetupId } = await context.params;
 
-    try {
-      const setup = await deps.lockBattleSetup(userId, battleSetupId);
-      return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
-    } catch (error: any) {
-      const message = error?.message ?? 'Failed to lock battle setup';
-      const status = message.includes('not found') ? 404 : 400;
-      return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
-    }
+        try {
+          const setup = await measure(
+            'request.battleSetupLock.lockBattleSetup',
+            () => deps.lockBattleSetup(userId, battleSetupId),
+            { userId, battleSetupId },
+          );
+          return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
+        } catch (error: any) {
+          const message = error?.message ?? 'Failed to lock battle setup';
+          const status = message.includes('not found') ? 404 : 400;
+          return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
+        }
+      },
+    );
   };
 }
 
@@ -195,18 +235,29 @@ export function createPostBattleSetupConsume(deps: BattleSetupDeps = defaultDeps
     req: Request,
     context: { params: Promise<{ battleSetupId: string }> },
   ) {
-    const userId = await resolveBattleSetupUserId(req, deps);
-    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
-    const { battleSetupId } = await context.params;
+    return measure(
+      'request.POST /api/v1/online-match/battle-setup/[battleSetupId]/consume',
+      async () => {
+        const userId = await measure('request.battleSetupConsume.resolveUserId', () =>
+          resolveBattleSetupUserId(req, deps),
+        );
+        if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+        const { battleSetupId } = await context.params;
 
-    try {
-      const setup = await deps.consumeBattleSetup(userId, battleSetupId);
-      return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
-    } catch (error: any) {
-      const message = error?.message ?? 'Failed to consume battle setup';
-      const status = message.includes('not found') ? 404 : 400;
-      return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
-    }
+        try {
+          const setup = await measure(
+            'request.battleSetupConsume.consumeBattleSetup',
+            () => deps.consumeBattleSetup(userId, battleSetupId),
+            { userId, battleSetupId },
+          );
+          return jsonOk({ battleSetupId: setup.battleSetupId, status: setup.status });
+        } catch (error: any) {
+          const message = error?.message ?? 'Failed to consume battle setup';
+          const status = message.includes('not found') ? 404 : 400;
+          return jsonError(status === 404 ? 'NOT_FOUND' : 'INVALID_INPUT', message, status);
+        }
+      },
+    );
   };
 }
 

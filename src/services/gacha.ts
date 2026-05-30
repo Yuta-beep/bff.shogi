@@ -1,4 +1,5 @@
 import { isPublishedNow } from '@/lib/time';
+import { measure } from '@/lib/perf';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
   effectiveGachaPieceWeight,
@@ -143,6 +144,12 @@ type ActiveGacha = {
   }>;
 };
 
+const ACTIVE_GACHA_CACHE_TTL_MS = 60_000;
+
+let activeGachaCache: ActiveGacha[] | null = null;
+let activeGachaCacheAt = 0;
+let activeGachaInFlight: Promise<ActiveGacha[]> | null = null;
+
 function toNumber(v: unknown, fallback = 0): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -229,27 +236,52 @@ function sortLobbyBanners(banners: GachaLobbyBanner[]): GachaLobbyBanner[] {
 }
 
 async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {
-  const { data: gachaRows, error: gachaError } = await supabaseAdmin
-    .schema('master')
-    .from('m_gacha')
-    .select(
-      'gacha_id,gacha_code,gacha_name,rarity_rate_n,rarity_rate_r,rarity_rate_sr,rarity_rate_ur,rarity_rate_ssr,pawn_cost,gold_cost,image_bucket,image_key,is_active,published_at,unpublished_at',
-    )
-    .order('gacha_id', { ascending: true });
+  const now = Date.now();
+  if (activeGachaCache && now - activeGachaCacheAt < ACTIVE_GACHA_CACHE_TTL_MS) {
+    return activeGachaCache;
+  }
+  if (activeGachaInFlight) return activeGachaInFlight;
+
+  activeGachaInFlight = loadActiveGachasWithPiecesUncached().finally(() => {
+    activeGachaInFlight = null;
+  });
+  const rows = await activeGachaInFlight;
+  activeGachaCache = rows;
+  activeGachaCacheAt = Date.now();
+  return rows;
+}
+
+async function loadActiveGachasWithPiecesUncached(): Promise<ActiveGacha[]> {
+  const { data: gachaRows, error: gachaError } = await measure(
+    'gacha.loadActiveGachas.gachaQuery',
+    () =>
+      supabaseAdmin
+        .schema('master')
+        .from('m_gacha')
+        .select(
+          'gacha_id,gacha_code,gacha_name,rarity_rate_n,rarity_rate_r,rarity_rate_sr,rarity_rate_ur,rarity_rate_ssr,pawn_cost,gold_cost,image_bucket,image_key,is_active,published_at,unpublished_at',
+        )
+        .order('gacha_id', { ascending: true }),
+  );
   if (gachaError) throw gachaError;
 
   const activeRows = ((gachaRows ?? []) as GachaRow[]).filter((row) => isPublishedNow(row));
   if (activeRows.length === 0) return [];
 
   const gachaIds = activeRows.map((row) => row.gacha_id);
-  const { data: pieceRows, error: pieceError } = await supabaseAdmin
-    .schema('master')
-    .from('m_gacha_piece')
-    .select(
-      'gacha_id,weight,m_piece:piece_id(piece_id,kanji,name,rarity,image_bucket,image_key,move_description_ja)',
-    )
-    .in('gacha_id', gachaIds)
-    .eq('is_active', true);
+  const { data: pieceRows, error: pieceError } = await measure(
+    'gacha.loadActiveGachas.pieceQuery',
+    () =>
+      supabaseAdmin
+        .schema('master')
+        .from('m_gacha_piece')
+        .select(
+          'gacha_id,weight,m_piece:piece_id(piece_id,kanji,name,rarity,image_bucket,image_key,move_description_ja)',
+        )
+        .in('gacha_id', gachaIds)
+        .eq('is_active', true),
+    { gachaCount: gachaIds.length },
+  );
   if (pieceError) throw pieceError;
 
   const pieceRowsByGacha = new Map<number, GachaPieceJoinRow[]>();
@@ -297,12 +329,17 @@ async function loadActiveGachasWithPieces(): Promise<ActiveGacha[]> {
 async function getPlayerWallet(
   userId: string,
 ): Promise<{ pawnCurrency: number; goldCurrency: number }> {
-  const { data, error } = await supabaseAdmin
-    .from('players')
-    .select('pawn_currency,gold_currency')
-    .eq('id', userId)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await measure(
+    'gacha.getPlayerWallet.query',
+    () =>
+      supabaseAdmin
+        .from('players')
+        .select('pawn_currency,gold_currency')
+        .eq('id', userId)
+        .limit(1)
+        .maybeSingle(),
+    { userId },
+  );
   if (error) throw error;
   if (!data) throw new Error('Player not found');
   return {
@@ -312,10 +349,11 @@ async function getPlayerWallet(
 }
 
 export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot> {
-  const [wallet, gachas] = await Promise.all([
-    getPlayerWallet(userId),
-    loadActiveGachasWithPieces(),
-  ]);
+  const [wallet, gachas] = await measure(
+    'gacha.getGachaLobby.parallel',
+    () => Promise.all([getPlayerWallet(userId), loadActiveGachasWithPieces()]),
+    { userId },
+  );
 
   const banners: GachaLobbyBanner[] = [];
   for (const gacha of gachas) {
@@ -471,6 +509,8 @@ export async function rollGacha(
     grantOwnedPiece(userId, picked.pieceId),
     getPlayerWallet(userId),
   ]);
+  activeGachaCache = null;
+  activeGachaCacheAt = 0;
   clearPieceCatalogCache();
 
   return {

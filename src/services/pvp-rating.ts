@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { measure } from '@/lib/perf';
 
 export const PVP_RATING_INITIAL = 0;
 export const PVP_RATING_WIN_DELTA = 50;
@@ -26,11 +27,16 @@ export async function applyPvpRatingForUser(input: {
     throw new Error('matchId is required');
   }
 
-  const { data, error } = await supabaseAdmin.rpc('apply_pvp_rating_for_user', {
-    p_user_id: input.userId,
-    p_match_id: matchId,
-    p_won: input.won,
-  });
+  const { data, error } = await measure(
+    'players.applyPvpRatingForUser.rpc',
+    () =>
+      supabaseAdmin.rpc('apply_pvp_rating_for_user', {
+        p_user_id: input.userId,
+        p_match_id: matchId,
+        p_won: input.won,
+      }),
+    { userId: input.userId, matchId, won: input.won },
+  );
 
   if (error) throw error;
 
@@ -66,12 +72,17 @@ export async function fetchPvpRatingLeaderboard(
 ): Promise<PvpRatingLeaderboardSnapshot> {
   const safeLimit = Math.min(PVP_RATING_LEADERBOARD_MAX_LIMIT, Math.max(1, Math.floor(limit)));
 
-  const { data, error } = await supabaseAdmin
-    .from('players')
-    .select('id,display_name,rating')
-    .order('rating', { ascending: false })
-    .order('updated_at', { ascending: true })
-    .limit(safeLimit);
+  const { data, error } = await measure(
+    'players.fetchPvpRatingLeaderboard.query',
+    () =>
+      supabaseAdmin
+        .from('players')
+        .select('id,display_name,rating')
+        .order('rating', { ascending: false })
+        .order('updated_at', { ascending: true })
+        .limit(safeLimit),
+    { limit: safeLimit },
+  );
 
   if (error) throw error;
 
@@ -95,12 +106,17 @@ export async function getPublicPlayerProfile(userId: string): Promise<{
   displayName: string;
   rating: number;
 } | null> {
-  const { data, error } = await supabaseAdmin
-    .from('players')
-    .select('display_name,rating')
-    .eq('id', userId)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await measure(
+    'players.getPublicPlayerProfile.query',
+    () =>
+      supabaseAdmin
+        .from('players')
+        .select('display_name,rating')
+        .eq('id', userId)
+        .limit(1)
+        .maybeSingle(),
+    { userId },
+  );
 
   if (error) throw error;
   if (!data) return null;

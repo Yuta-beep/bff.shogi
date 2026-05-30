@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { measure } from '@/lib/perf';
 import { resolveBearerUserId } from '@/lib/auth';
 import { deleteDeck, getDeckSnapshot, saveDeck, upsertDeck } from '@/services/deck';
 
@@ -28,15 +29,23 @@ const defaultDeckDeps: DeckDeps = {
 
 export function createGetDeck(deps: DeckDeps = defaultDeckDeps) {
   return async function getDeck(req: Request) {
-    const userId = await deps.resolveUserId(req);
-    if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+    return measure('request.GET /api/v1/deck', async () => {
+      const userId = await measure('request.deck.resolveUserId', () => deps.resolveUserId(req));
+      if (!userId) return jsonError('UNAUTHORIZED', 'Authentication required', 401);
 
-    try {
-      const snapshot = await deps.getDeckSnapshot(userId);
-      return jsonOk(snapshot);
-    } catch (error: any) {
-      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load deck data', 500);
-    }
+      try {
+        const snapshot = await measure(
+          'request.deck.getDeckSnapshot',
+          () => deps.getDeckSnapshot(userId),
+          {
+            userId,
+          },
+        );
+        return jsonOk(snapshot);
+      } catch (error: any) {
+        return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load deck data', 500);
+      }
+    });
   };
 }
 

@@ -1,5 +1,6 @@
 import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
+import { measure } from '@/lib/perf';
 import { getPlayerDisplayName, upsertPlayerDisplayName } from '@/services/player-profile';
 
 export function optionsMeDisplayName() {
@@ -24,17 +25,25 @@ export function createGetMeDisplayName(
   deps: GetMeDisplayNameDeps = { resolveUserId, getPlayerDisplayName },
 ) {
   return async function getMeDisplayName(req: Request) {
-    const userId = await deps.resolveUserId(req);
-    if (!userId) {
-      return jsonError('UNAUTHORIZED', 'Authentication required', 401);
-    }
+    return measure('request.GET /api/v1/me/display-name', async () => {
+      const userId = await measure('request.displayName.resolveUserId', () =>
+        deps.resolveUserId(req),
+      );
+      if (!userId) {
+        return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+      }
 
-    try {
-      const displayName = await deps.getPlayerDisplayName(userId);
-      return jsonOk({ displayName });
-    } catch (error: any) {
-      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load display name', 500);
-    }
+      try {
+        const displayName = await measure(
+          'request.displayName.getPlayerDisplayName',
+          () => deps.getPlayerDisplayName(userId),
+          { userId },
+        );
+        return jsonOk({ displayName });
+      } catch (error: any) {
+        return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to load display name', 500);
+      }
+    });
   };
 }
 
@@ -46,33 +55,41 @@ export function createPutMeDisplayName(
   deps: PutMeDisplayNameDeps = { resolveUserId, upsertPlayerDisplayName },
 ) {
   return async function putMeDisplayName(req: Request) {
-    const userId = await deps.resolveUserId(req);
-    if (!userId) {
-      return jsonError('UNAUTHORIZED', 'Authentication required', 401);
-    }
+    return measure('request.PUT /api/v1/me/display-name', async () => {
+      const userId = await measure('request.displayName.resolveUserId', () =>
+        deps.resolveUserId(req),
+      );
+      if (!userId) {
+        return jsonError('UNAUTHORIZED', 'Authentication required', 401);
+      }
 
-    let body: PutBody;
-    try {
-      body = (await req.json()) as PutBody;
-    } catch {
-      return jsonError('INVALID_JSON', 'Request body must be JSON', 400);
-    }
+      let body: PutBody;
+      try {
+        body = (await req.json()) as PutBody;
+      } catch {
+        return jsonError('INVALID_JSON', 'Request body must be JSON', 400);
+      }
 
-    const raw = typeof body.displayName === 'string' ? body.displayName : '';
-    const displayName = raw.trim();
-    if (!displayName) {
-      return jsonError('INVALID_INPUT', 'displayName is required', 400);
-    }
-    if (displayName.length > 20) {
-      return jsonError('INVALID_INPUT', 'displayName must be 20 characters or fewer', 400);
-    }
+      const raw = typeof body.displayName === 'string' ? body.displayName : '';
+      const displayName = raw.trim();
+      if (!displayName) {
+        return jsonError('INVALID_INPUT', 'displayName is required', 400);
+      }
+      if (displayName.length > 20) {
+        return jsonError('INVALID_INPUT', 'displayName must be 20 characters or fewer', 400);
+      }
 
-    try {
-      await deps.upsertPlayerDisplayName(userId, displayName);
-      return jsonOk({ displayName });
-    } catch (error: any) {
-      return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to update display name', 500);
-    }
+      try {
+        await measure(
+          'request.displayName.upsertPlayerDisplayName',
+          () => deps.upsertPlayerDisplayName(userId, displayName),
+          { userId },
+        );
+        return jsonOk({ displayName });
+      } catch (error: any) {
+        return jsonError('INTERNAL_ERROR', error?.message ?? 'Failed to update display name', 500);
+      }
+    });
   };
 }
 

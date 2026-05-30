@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { measure } from '@/lib/perf';
 import { isPublishedNow } from '@/lib/time';
 
 export type StageRow = {
@@ -18,10 +19,23 @@ export type StageRow = {
 };
 
 const STAGE_MASTER_TTL_MS = 60_000;
+const STAGE_BATTLE_SETUP_TTL_MS = 60_000;
 
 let cachedStageRows: StageRow[] | null = null;
 let cachedStageRowsAt = 0;
 let stageRowsInFlight: Promise<StageRow[]> | null = null;
+
+type StageBattleSetupMasterRows = {
+  placements: any[];
+  roster: any[];
+  rewards: any[];
+};
+
+const stageBattleSetupCache = new Map<
+  number,
+  { rows: StageBattleSetupMasterRows; cachedAt: number }
+>();
+const stageBattleSetupInFlight = new Map<number, Promise<StageBattleSetupMasterRows>>();
 
 async function loadStageRows(force = false): Promise<StageRow[]> {
   const now = Date.now();
@@ -31,13 +45,15 @@ async function loadStageRows(force = false): Promise<StageRow[]> {
   if (stageRowsInFlight) return stageRowsInFlight;
 
   stageRowsInFlight = (async () => {
-    const { data, error } = await supabaseAdmin
-      .schema('master')
-      .from('m_stage')
-      .select(
-        'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
-      )
-      .order('stage_no', { ascending: true });
+    const { data, error } = await measure('stageMaster.loadStageRows.query', () =>
+      supabaseAdmin
+        .schema('master')
+        .from('m_stage')
+        .select(
+          'stage_id,stage_no,stage_name,unlock_stage_no,difficulty,stage_category,clear_condition_type,clear_condition_params,recommended_power,stamina_cost,is_active,published_at,unpublished_at',
+        )
+        .order('stage_no', { ascending: true }),
+    );
 
     if (error) throw error;
 
@@ -84,52 +100,24 @@ export async function getStageBattleSetup(
     return row?.m_piece ?? null;
   };
 
-  const placementPromise = supabaseAdmin
-    .schema('master')
-    .from('m_stage_initial_placement')
-    .select(
-      'side,row_no,col_no,piece_id,m_piece:piece_id(piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key)',
-    )
-    .eq('stage_id', stageId)
-    .order('side', { ascending: true })
-    .order('row_no', { ascending: true })
-    .order('col_no', { ascending: true });
-
-  const rosterPromise = supabaseAdmin
-    .schema('master')
-    .from('m_stage_piece')
-    .select('role,weight,piece_id,m_piece:piece_id(piece_code,kanji,name)')
-    .eq('stage_id', stageId)
-    .order('role', { ascending: true });
-
-  const rewardPromise = supabaseAdmin
-    .schema('master')
-    .from('m_stage_reward')
-    .select(
-      'reward_timing,quantity,drop_rate,sort_order,m_reward:reward_id(reward_code,reward_type,reward_name,item_code,piece_id)',
-    )
-    .eq('stage_id', stageId)
-    .order('sort_order', { ascending: true });
+  const masterRowsPromise = loadStageBattleSetupMasterRows(stageId);
 
   const deckPromise = playerId
-    ? supabaseAdmin
-        .from('player_decks')
-        .select('deck_id,name,player_deck_placements(row_no,col_no,piece_id)')
-        .eq('player_id', playerId)
-        .order('deck_id', { ascending: true })
+    ? measure(
+        'stageMaster.getStageBattleSetup.playerDeckQuery',
+        () =>
+          supabaseAdmin
+            .from('player_decks')
+            .select('deck_id,name,player_deck_placements(row_no,col_no,piece_id)')
+            .eq('player_id', playerId)
+            .order('deck_id', { ascending: true }),
+        { stageId, playerId },
+      )
     : Promise.resolve(null);
 
-  const [placementRes, rosterRes, rewardRes, deckRes] = await Promise.all([
-    placementPromise,
-    rosterPromise,
-    rewardPromise,
-    deckPromise,
-  ]);
+  const [masterRows, deckRes] = await Promise.all([masterRowsPromise, deckPromise]);
 
-  if (placementRes.error) throw placementRes.error;
-  if (rosterRes.error) throw rosterRes.error;
-
-  const stagePlacementRows = (placementRes.data ?? []) as any[];
+  const stagePlacementRows = masterRows.placements;
   let playerPlacementRowsFromDeck: any[] = [];
 
   if (deckRes && !deckRes.error) {
@@ -153,17 +141,22 @@ export async function getStageBattleSetup(
           ),
         ];
         if (pieceIds.length > 0) {
-          const pieceRes = await supabaseAdmin
-            .schema('master')
-            .from('m_piece')
-            .select(
-              'piece_id,piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key',
-            )
-            .in('piece_id', pieceIds);
+          const { data: pieces, error } = await measure(
+            'stageMaster.getStageBattleSetup.playerDeckPiecesQuery',
+            () =>
+              supabaseAdmin
+                .schema('master')
+                .from('m_piece')
+                .select(
+                  'piece_id,piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key',
+                )
+                .in('piece_id', pieceIds),
+            { stageId, playerId, pieceCount: pieceIds.length },
+          );
 
-          if (!pieceRes.error) {
+          if (!error) {
             const pieceById = new Map<number, any>(
-              (pieceRes.data ?? []).map((piece: any) => [piece.piece_id, piece]),
+              (pieces ?? []).map((piece: any) => [piece.piece_id, piece]),
             );
             playerPlacementRowsFromDeck = targetDeck.player_deck_placements
               .map((placement) => {
@@ -203,7 +196,7 @@ export async function getStageBattleSetup(
     await applyStage39OniVariants(mergedPlacementRows);
   }
 
-  const rewards = rewardRes.error ? [] : (rewardRes.data ?? []);
+  const rewards = masterRows.rewards;
 
   return {
     board: {
@@ -227,7 +220,7 @@ export async function getStageBattleSetup(
         };
       }),
     },
-    enemyRoster: (rosterRes.data ?? []).map((row: any) => ({
+    enemyRoster: masterRows.roster.map((row: any) => ({
       role: row.role,
       weight: row.weight,
       piece: {
@@ -250,6 +243,99 @@ export async function getStageBattleSetup(
         pieceId: row.m_reward?.piece_id ?? null,
       },
     })),
+  };
+}
+
+async function loadStageBattleSetupMasterRows(
+  stageId: number,
+): Promise<StageBattleSetupMasterRows> {
+  const now = Date.now();
+  const cached = stageBattleSetupCache.get(stageId);
+  if (cached && now - cached.cachedAt < STAGE_BATTLE_SETUP_TTL_MS) {
+    return cloneStageBattleSetupMasterRows(cached.rows);
+  }
+
+  const inFlight = stageBattleSetupInFlight.get(stageId);
+  if (inFlight) return cloneStageBattleSetupMasterRows(await inFlight);
+
+  const loader = loadStageBattleSetupMasterRowsUncached(stageId).finally(() => {
+    stageBattleSetupInFlight.delete(stageId);
+  });
+  stageBattleSetupInFlight.set(stageId, loader);
+
+  const rows = await loader;
+  stageBattleSetupCache.set(stageId, { rows, cachedAt: Date.now() });
+  return cloneStageBattleSetupMasterRows(rows);
+}
+
+async function loadStageBattleSetupMasterRowsUncached(
+  stageId: number,
+): Promise<StageBattleSetupMasterRows> {
+  const placementPromise = measure(
+    'stageMaster.getStageBattleSetup.placementQuery',
+    () =>
+      supabaseAdmin
+        .schema('master')
+        .from('m_stage_initial_placement')
+        .select(
+          'side,row_no,col_no,piece_id,m_piece:piece_id(piece_code,kanji,name,move_pattern_id,skill_id,image_bucket,image_key)',
+        )
+        .eq('stage_id', stageId)
+        .order('side', { ascending: true })
+        .order('row_no', { ascending: true })
+        .order('col_no', { ascending: true }),
+    { stageId },
+  );
+
+  const rosterPromise = measure(
+    'stageMaster.getStageBattleSetup.rosterQuery',
+    () =>
+      supabaseAdmin
+        .schema('master')
+        .from('m_stage_piece')
+        .select('role,weight,piece_id,m_piece:piece_id(piece_code,kanji,name)')
+        .eq('stage_id', stageId)
+        .order('role', { ascending: true }),
+    { stageId },
+  );
+
+  const rewardPromise = measure(
+    'stageMaster.getStageBattleSetup.rewardQuery',
+    () =>
+      supabaseAdmin
+        .schema('master')
+        .from('m_stage_reward')
+        .select(
+          'reward_timing,quantity,drop_rate,sort_order,m_reward:reward_id(reward_code,reward_type,reward_name,item_code,piece_id)',
+        )
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true }),
+    { stageId },
+  );
+
+  const [placementRes, rosterRes, rewardRes] = await Promise.all([
+    placementPromise,
+    rosterPromise,
+    rewardPromise,
+  ]);
+
+  if (placementRes.error) throw placementRes.error;
+  if (rosterRes.error) throw rosterRes.error;
+
+  return {
+    placements: (placementRes.data ?? []) as any[],
+    roster: (rosterRes.data ?? []) as any[],
+    rewards: rewardRes.error ? [] : ((rewardRes.data ?? []) as any[]),
+  };
+}
+
+function cloneStageBattleSetupMasterRows(
+  rows: StageBattleSetupMasterRows,
+): StageBattleSetupMasterRows {
+  return {
+    placements: structuredClone(rows.placements),
+    roster: structuredClone(rows.roster),
+    rewards: structuredClone(rows.rewards),
   };
 }
 
