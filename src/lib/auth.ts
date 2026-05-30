@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { measure } from '@/lib/perf';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-const AUTH_CACHE_TTL_MS = 5_000;
+const AUTH_CACHE_TTL_MS = getAuthCacheTtlMs();
 const AUTH_NEGATIVE_CACHE_TTL_MS = 1_000;
 const AUTH_CACHE_MAX_ENTRIES = 1_000;
 
@@ -85,6 +85,15 @@ function resolveAuthCacheTtlMs(token: string, isAuthorized: boolean): number {
   if (!jwtExpiryAt) return AUTH_CACHE_TTL_MS;
 
   return Math.max(0, Math.min(AUTH_CACHE_TTL_MS, jwtExpiryAt - Date.now()));
+}
+
+function getAuthCacheTtlMs(): number {
+  const parsed = Number(process.env.AUTH_CACHE_TTL_MS);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return Math.floor(parsed);
+  }
+
+  return 60_000;
 }
 
 function parseJwtExpiryAt(token: string): number | null {
