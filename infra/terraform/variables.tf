@@ -82,3 +82,19 @@ variable "ai_engine_base_url" {
   sensitive   = true
   nullable    = true
 }
+
+variable "matching_bff_internal_token" {
+  description = "Shared internal token used by matching_server.shogi for internal BFF API calls."
+  type        = string
+  default     = null
+  sensitive   = true
+  nullable    = true
+}
+
+variable "matching_ticket_secret" {
+  description = "Shared HMAC secret used to sign and verify matchmaking tickets."
+  type        = string
+  default     = null
+  sensitive   = true
+  nullable    = true
+}

@@ -38,6 +38,8 @@ Required values:
 Optional value:
 
 - `ai_engine_base_url`
+- `matching_bff_internal_token`
+- `matching_ticket_secret`
 
 ## Deploy
 
@@ -72,6 +74,8 @@ Required GitHub repository secrets:
 Optional GitHub repository secret:
 
 - `TF_VAR_ai_engine_base_url`
+- `TF_VAR_matching_bff_internal_token`
+- `TF_VAR_matching_ticket_secret`
 
 The workflow also expects these repository variables:
 

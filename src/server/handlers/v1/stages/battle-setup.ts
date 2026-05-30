@@ -1,9 +1,10 @@
+import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { isPublishedNow } from '@/lib/time';
 import { getStageBattleSetup, getStageByNo } from '@/services/stage-master';
 
 type BattleSetupDeps = {
+  resolveUserId: (req: Request) => Promise<string | null>;
   getStageByNo: typeof getStageByNo;
   isPublishedNow: typeof isPublishedNow;
   getStageBattleSetup: typeof getStageBattleSetup;
@@ -15,6 +16,7 @@ export function optionsBattleSetup() {
 
 export function createGetBattleSetup(
   deps: BattleSetupDeps = {
+    resolveUserId: resolveBearerUserId,
     getStageByNo,
     isPublishedNow,
     getStageBattleSetup,
@@ -37,13 +39,8 @@ export function createGetBattleSetup(
       }
 
       let userId: string | null = null;
-      const auth = req?.headers.get('Authorization') ?? '';
-      const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-      if (token) {
-        const { data, error } = await supabaseAdmin.auth.getUser(token);
-        if (!error && data?.user?.id) {
-          userId = data.user.id;
-        }
+      if (req) {
+        userId = await deps.resolveUserId(req);
       }
 
       const setup = await deps.getStageBattleSetup(stage.stage_id, userId);

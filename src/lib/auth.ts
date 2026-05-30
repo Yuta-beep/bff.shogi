@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto';
+
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function resolveBearerUserId(req: Request): Promise<string | null> {
@@ -15,5 +17,11 @@ export function isAuthorizedInternalRequest(req: Request): boolean {
   if (!expected) return false;
 
   const token = (req.headers.get('x-matching-internal-token') ?? '').trim();
-  return token.length > 0 && token === expected;
+  if (!token) return false;
+
+  const expectedBytes = Buffer.from(expected, 'utf8');
+  const tokenBytes = Buffer.from(token, 'utf8');
+  if (expectedBytes.length !== tokenBytes.length) return false;
+
+  return timingSafeEqual(expectedBytes, tokenBytes);
 }

@@ -6,6 +6,7 @@ import { readJson } from './test-utils';
 describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
   it('returns 404 for missing stage', async () => {
     const handler = createGetBattleSetup({
+      resolveUserId: async () => null,
       getStageByNo: async () => null,
       isPublishedNow: () => true,
       getStageBattleSetup: async () => ({
@@ -23,6 +24,7 @@ describe('GET /api/v1/stages/:stageNo/battle-setup', () => {
 
   it('returns 200 and fixed shape on success', async () => {
     const handler = createGetBattleSetup({
+      resolveUserId: async () => null,
       getStageByNo: async () => ({
         stage_id: 1,
         stage_no: 1,

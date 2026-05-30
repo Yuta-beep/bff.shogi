@@ -24,10 +24,8 @@ export function withCors(init?: ResponseInit): ResponseInit {
   const headers = new Headers(init?.headers);
   headers.set('Access-Control-Allow-Origin', '*');
   headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  headers.set(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, x-matching-internal-token, x-internal-user-id',
-  );
+  headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  headers.set('Vary', 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers');
   return { ...init, headers };
 }
 
