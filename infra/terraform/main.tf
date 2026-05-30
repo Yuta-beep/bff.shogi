@@ -16,7 +16,7 @@ provider "aws" {
 locals {
   normalized_project = replace(var.project, ".", "-")
   name_prefix        = "${local.normalized_project}-${var.env}"
-  lambda_function    = "${local.name_prefix}-api"
+  lambda_function    = "manakana-shogi-backend-for-frontend-api"
   lambda_role        = "${local.name_prefix}-lambda-role"
   http_api_name      = "${local.name_prefix}-http-api"
   log_group_name     = "/aws/lambda/${local.lambda_function}"
