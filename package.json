@@ -40,6 +40,8 @@
     "seed:pieces:catalog:images:apply": "node scripts/apply-piece-catalog-image-keys.mjs --apply",
     "seed:promoted-piece-images:storage": "node scripts/upload-promoted-piece-images-to-storage.mjs",
     "seed:promoted-piece-images:storage:apply": "node scripts/upload-promoted-piece-images-to-storage.mjs --apply",
+    "seed:announcements": "bun run scripts/seed-announcements.ts",
+    "seed:announcements:apply": "bun run scripts/seed-announcements.ts --apply",
     "reset:users": "node scripts/reset-auth-users.mjs",
     "reset:users:apply": "node scripts/reset-auth-users.mjs --apply",
     "db:link": "npx supabase@latest link --project-ref jxtzlgcikacuttjesfoe",
